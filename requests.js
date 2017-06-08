@@ -7,26 +7,49 @@ jQuery(document).ready(function($) {
 	ajaxdata.nonce = AJAX_VAR.nonce;
 
 	function start_products_update(ajaxdata){
+		$('#ajax_action').html('Старт выгрузки.');
+
 		$.ajax({
 			type: 'POST',
 			url: AJAX_VAR.url,
 			data: ajaxdata,
 			success: function(response){
 				ajaxdata.counter++;
-				if(ajaxdata.counter <= ajaxdata.update_count)
+				if(ajaxdata.counter <= ajaxdata.update_count){
 					start_products_update(ajaxdata);
-				else
-					alert('Выгрузка завершена');
 
-				var progrss = (100 / ajaxdata.update_count) * (ajaxdata.counter - 1);
-				// console.log( 100 / ajaxdata.update_count +', '+ ajaxdata.counter +', '+ progrss );
-				$('.progress .progress-fill').css('width',  progrss + '%' );
+					var progrss = (100 / ajaxdata.update_count) * (ajaxdata.counter - 1);
+					if(progrss >= 100) progrss = 97;
+					$('.progress .progress-fill').css('width',  progrss + '%' );
+				}
+				else{
+					$('#ajax_action').html('Исправление кэш карты.');
+
+					var fixmap = { 'nonce' : AJAX_VAR.nonce };
+					
+					fixmap.action = ( ajaxdata.action == 'insert_terms' ) ? 'fix_term_map' : 'fix_product_map';
+
+					$.ajax({
+						type : 'POST',
+						url: AJAX_VAR.url,
+						data : fixmap,
+						success: function(response){
+							$('#ajax_action').html('Выгрузка завершена!');
+
+							ajaxdata.counter = 0;
+							progrss = 0;
+							$('.progress .progress-fill').css('width', '100%' );
+						}
+					});
+					
+				}
 			}
 		}).fail(function() { alert('AJAX Error'); });
 	}
 	
 	$('#load-products').on('click', function(event) {
 		event.preventDefault();
+		$(this).removeClass('button-primary');
 
 		ajaxdata.action = 'insert_posts';
 		ajaxdata.update_count = Math.floor( $('#p_count').val() / AJAX_VAR.products_at_once ); // количество запросов
@@ -35,9 +58,9 @@ jQuery(document).ready(function($) {
 	});
 
 	$('#load-categories').on('click', function(event) {
-		console.log('clack!');
 		event.preventDefault();
 
+		$(this).removeClass('button-primary');
 		ajaxdata.action = 'insert_terms';
 		ajaxdata.update_count = Math.floor( $('#t_count').val() / AJAX_VAR.products_at_once ); // количество запросов
 		ajaxdata.at_once = AJAX_VAR.products_at_once;

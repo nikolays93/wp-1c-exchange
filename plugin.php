@@ -20,12 +20,16 @@ $upload_dir = wp_upload_dir();
 define('NEW_PLUG_URL', plugins_url( basename(__DIR__) ) );
 define('NEW_PLUG_DIR', plugin_dir_path( __FILE__ ) );
 define('EXCHANGE_DIR', $upload_dir['basedir'] . '/1c_exchange');
+define('CACHE_EXCHANGE_DIR', EXCHANGE_DIR . '/cache' );
 define('NEW_OPTION', 'exchange');
 
 if(is_admin()){
   require_once NEW_PLUG_DIR . '/inc/class-wp-admin-page-render.php';
   require_once NEW_PLUG_DIR . '/inc/class-wp-form-render.php';
+  require_once NEW_PLUG_DIR . '/inc/class-wc-product-settings.php';
+  
   require_once NEW_PLUG_DIR . '/inc/exchange.php';
+
 
   add_filter( NEW_OPTION . '_columns', function(){return 2;} );
 
@@ -42,6 +46,28 @@ if(is_admin()){
 
   $page->add_metabox( 'exchange_box', __('Выгрузить'), 'PLUGIN_NAME\qq', 'side');
   $page->set_metaboxes();
+
+
+  $wc_fields = new \WCProductSettings();
+  $wc_fields->add_field( array(
+    'type'        => 'text',
+    'id'          => '_1c_sku',
+    'label'       => 'Артикул 1C',
+    //'description' => 'Этот товар будет показываться в блоке популярных товаров',
+    ) );
+
+  $wc_fields->add_field( array(
+    'type'        => 'text',
+    'id'          => '_stock_wh',
+    'label'       => 'Наличие на складах',
+    'description' => 'Роботизированная строка КоличествоНаСкладе',
+    ) );
+
+  
+
+  $wc_fields->set_fields();
+
+  // var_dump(  get_post_meta(328));
 }
 
 /**
@@ -76,17 +102,25 @@ function translit($s) {
 
 function _render_page(){
   echo "<div class='progress'><div class='progress-fill'></div></div>";
+  echo "<div id='ajax_action'></div>";
+
+  $file = file(CACHE_EXCHANGE_DIR . '/groups.map');
+  echo "<pre>";
+  foreach ($file as $str) {
+    var_dump( unserialize($str) );
+  }
+  echo "</pre>";
 
   $products = array();
   $terms = array();
   $p_count = 0;
   $t_count = 0;
 
-  if( is_readable( EXCHANGE_DIR . '/exchange.cahce' ) && is_readable( EXCHANGE_DIR . '/groups.cahce' ) ){
-    $products = unserialize( file_get_contents(EXCHANGE_DIR . '/exchange.cahce') );
+  if( is_readable( CACHE_EXCHANGE_DIR . '/products.cache' ) && is_readable( CACHE_EXCHANGE_DIR . '/groups.cache' ) ){
+    $products = unserialize( file_get_contents(CACHE_EXCHANGE_DIR . '/products.cache') );
     $p_count = count($products);
 
-    $terms = unserialize( file_get_contents(EXCHANGE_DIR . '/groups.cahce') );
+    $terms = unserialize( file_get_contents(CACHE_EXCHANGE_DIR . '/groups.cache') );
     $t_count = count($terms);
   }
   else {
@@ -113,6 +147,8 @@ function _render_page(){
 
     /**
      * Add Groups cache
+     *
+     * @todo recursive
      */
     foreach( $import->Классификатор->Группы->Группа as $_group ){
       $gid =   (string) $_group->Ид;
@@ -126,10 +162,10 @@ function _render_page(){
       $t_count++;
       if( isset($_group->Группы->Группа) ){
         foreach ($_group->Группы->Группа as $_parent_group) {
-          //$pgid = (string) $_parent_group->Ид;
+          $pgid = (string) $_parent_group->Ид;
           $gname = preg_replace("/(^[0-9\/|\-_.]+. )/", "", (string) $_parent_group->Наименование );
 
-          $terms[$gid]['parent'][] = array(
+          $terms[$gid]['parent'][$pgid] = array(
             'name' => preg_replace("/(^[0-9\/|\-_.]+. )/", "", $gname ),
             'slug' => translit($gname),
             'parent' => $gid,
@@ -140,7 +176,7 @@ function _render_page(){
       }
     }
 
-    file_put_contents( EXCHANGE_DIR . '/groups.cahce', serialize($terms) );
+    file_put_contents( CACHE_EXCHANGE_DIR . '/groups.cache', serialize($terms) );
     
 
     $offers = new \SimpleXMLElement( file_get_contents(EXCHANGE_DIR . '/offers0_1.xml') );
@@ -166,15 +202,16 @@ function _render_page(){
       // $p_count++;
     }
 
-    file_put_contents(EXCHANGE_DIR . '/exchange.cahce', serialize($products));
+    file_put_contents(CACHE_EXCHANGE_DIR . '/products.cache', serialize($products));
   }
 
   echo '<p>Найдено товаров: <input type="text" readonly="true" value="'.$p_count.'" id="p_count"></p>';
   echo '<p>Найдено категорий: <input type="text" readonly="true" value="'.$t_count.'" id="t_count"></p>';
 
-  echo "<pre>";
+  echo "<pre style='height: 200px; overflow-y: scroll;'>";
   print_r($terms);
   echo "</pre>";
+
   echo "<pre style='height: 500px; overflow-y: scroll;'>";
   print_r($products);
   echo "</pre>";
@@ -212,8 +249,8 @@ function _validate_plugin( $inputs ){
 
     $inputs['update_count'] = isset($inputs['update_count']) ? intval($inputs['update_count']) : 40;
     if( isset($inputs['update_cache']) && $inputs['update_cache'] ){
-      unlink(EXCHANGE_DIR . '/exchange.cahce');
-      unlink(EXCHANGE_DIR . '/groups.cahce');
+      unlink(CACHE_EXCHANGE_DIR . '/products.cache');
+      unlink(CACHE_EXCHANGE_DIR . '/groups.cache');
 
       unset($inputs['update_cache']);
     }
@@ -222,4 +259,3 @@ function _validate_plugin( $inputs ){
 
     return $inputs;
 }
-
