@@ -50,6 +50,7 @@ function add_product_meta($pid, $product, $post_id){
   update_post_meta( $post_id, '_1c_sku', $product['sku']);
   update_post_meta( $post_id, '_1c_id', (string) $pid );
 
+  update_post_meta( $post_id, '_price', $product['offer'][$pid]['regular_price'] );
   update_post_meta( $post_id, '_regular_price', $product['offer'][$pid]['regular_price'] );
   update_post_meta( $post_id, '_sale_price', "" );
   update_post_meta( $post_id, '_sale_price_dates_from', "" );
