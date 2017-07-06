@@ -66,8 +66,6 @@ if(is_admin()){
   
 
   $wc_fields->set_fields();
-
-  // var_dump(  get_post_meta(328));
 }
 
 /**
@@ -104,12 +102,12 @@ function _render_page(){
   echo "<div class='progress'><div class='progress-fill'></div></div>";
   echo "<div id='ajax_action'></div>";
 
-  $file = file(CACHE_EXCHANGE_DIR . '/groups.map');
-  echo "<pre>";
-  foreach ($file as $str) {
-    var_dump( unserialize($str) );
-  }
-  echo "</pre>";
+  // $file = file(CACHE_EXCHANGE_DIR . '/groups.map');
+  // echo "<pre>";
+  // foreach ($file as $str) {
+  //   var_dump( unserialize($str) );
+  // }
+  // echo "</pre>";
 
   $products = array();
   $terms = array();
@@ -208,13 +206,13 @@ function _render_page(){
   echo '<p>Найдено товаров: <input type="text" readonly="true" value="'.$p_count.'" id="p_count"></p>';
   echo '<p>Найдено категорий: <input type="text" readonly="true" value="'.$t_count.'" id="t_count"></p>';
 
-  echo "<pre style='height: 200px; overflow-y: scroll;'>";
-  print_r($terms);
-  echo "</pre>";
+  // echo "<pre style='height: 200px; overflow-y: scroll;'>";
+  // print_r($terms);
+  // echo "</pre>";
 
-  echo "<pre style='height: 500px; overflow-y: scroll;'>";
-  print_r($products);
-  echo "</pre>";
+  // echo "<pre style='height: 500px; overflow-y: scroll;'>";
+  // print_r($products);
+  // echo "</pre>";
 
   $data = array(
     array(
