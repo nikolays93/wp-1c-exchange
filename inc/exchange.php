@@ -8,10 +8,14 @@
 /**
  * Add Script Variables
  *
+ * Подключаем нужные скрипты и
  * Передаем скрипту requests.js переменную AJAX_VAR
  */
 add_action( 'admin_enqueue_scripts', 'add_ajax_data', 99 );
 function add_ajax_data(){
+  /**
+   * screen->id изменяется если изменить положение сслыки в меню.
+   */
   $screen = get_current_screen();
   if( $screen->id != 'woocommerce_page_exchange' )
     return;
@@ -29,19 +33,6 @@ function add_ajax_data(){
   );
 }
 
-function create_map($map, $path){
-  if(!is_array($map) || !is_string($path) )
-    return false;
-
-  $fp = fopen($path, 'a');
-  if($fp){
-    fwrite($fp, serialize($map) . "\r\n" );
-    fclose($fp);
-  } else {
-    echo 'Файл не найден или не может быть записан.';
-  }
-}
-
 /**
  * Products
  */
@@ -50,6 +41,7 @@ function add_product_meta($pid, $product, $post_id){
   update_post_meta( $post_id, '_1c_sku', $product['sku']);
   update_post_meta( $post_id, '_1c_id', (string) $pid );
 
+  update_post_meta( $post_id, '_price', $product['offer'][$pid]['regular_price'] );
   update_post_meta( $post_id, '_regular_price', $product['offer'][$pid]['regular_price'] );
   update_post_meta( $post_id, '_sale_price', "" );
   update_post_meta( $post_id, '_sale_price_dates_from', "" );
@@ -94,13 +86,11 @@ function add_product_meta($pid, $product, $post_id){
 function get_product_terms( $product = false ){
   if(!isset($product['terms']))
     return null;
-  else
-    $terms = $product['terms'];
 
   $groups = unserialize( file_get_contents(CACHE_EXCHANGE_DIR . '/groups.map') );
   $post_terms = array();
-  if( is_array($terms) ){
-    foreach ($terms as $_1c_term_id) {
+  if( is_array($product['terms']) ){
+    foreach ($product['terms'] as $_1c_term_id) {
       if( isset($groups[$_1c_term_id]) )
         $post_terms[] = (int) $groups[$_1c_term_id];
     }
@@ -152,23 +142,21 @@ function exchange_insert_posts() {
       $post_id = wp_insert_post( $args );
     }
     
+
     if( is_wp_error($post_id) )
       return;
 
     $posts_map[] = array( $pid => $post_id );
 
     add_product_meta($pid, $product, $post_id);
-
   	if( $i >= $to )
   		break;
   }
+  // if(sizeof($posts_map) >= 1)
+  //   write_to_file($posts_map, CACHE_EXCHANGE_DIR . '/_products.map', 'a');
 
-  if(sizeof($posts_map) >= 1)
-    create_map($posts_map, CACHE_EXCHANGE_DIR . '/_products.map');
-
-  wp_die();
+  wp_die('?');
 }
-
 
 /**
  * Terms
@@ -181,27 +169,33 @@ function exchange_insert_posts() {
 /**
  * Insert hierarchical terms
  */
-function recursive_wp_insert_term( $id, $data, $parent = false, &$terms_map ){
-  $_term = wp_insert_term(
-  $data['name'], // новый термин
-  'product_cat', // категория товара
-  array(
+function recursive_wp_term( $id, $data, $parent = false, $old_terms_map, &$new_terms_map ){
+  $args = array(
     'description'=> '',
     'slug' => $data['slug'],
     'parent' => $parent ? $parent : null,
-    )
-  );
+    );
+
+  if( array_key_exists($id, $old_terms_map) ){
+    $args['name'] = $data['name'];
+    wp_update_term( $old_terms_map[$id], 'product_cat', $args );
+  }
+  else {
+    $_term = wp_insert_term($data['name'], 'product_cat', $args);
+  }
 
   if( is_wp_error($_term) || ! isset($_term['term_id']) )
     return;
 
-  $terms_map[] = array( (string) $id => (int) $_term['term_id'] );
+  $_term_id = (int) $_term['term_id'];
+  $new_terms_map[] = array( (string) $id => $_term_id );
 
-  update_term_meta( $_term['term_id'], '_1c_term_id', (string) $id );
+  update_term_meta( $_term_id, '_1c_term_id', (string) $id );
 
   if( isset($data['parent']) ){
     foreach ($data['parent'] as $child_id => $child_data ) {
-      recursive_wp_insert_term($child_id, $child_data, $_term['term_id'], $terms_map );
+      // Тоже самое проделвыаем с дочерними терминами
+      recursive_wp_term($child_id, $child_data, $_term_id, $old_terms_map, $new_terms_map );
     }
   }
 }
@@ -211,61 +205,77 @@ function exchange_insert_terms() {
   if( ! wp_verify_nonce( $_POST['nonce'], 'any_secret_string' ) )
     wp_die('Ошибка! нарушены правила безопасности');
   
-  $to = $_POST['at_once'] * $_POST['counter'];
+  // Обработать Начиная с 
   $from = $to - $_POST['at_once'];
-
+  // До
+  $to = $_POST['at_once'] * $_POST['counter'];
+  // Масив из файла
   $terms = unserialize( file_get_contents(CACHE_EXCHANGE_DIR . '/groups.cache') );
 
+  // Загрузить карту и пропсукать либо обрабатывать уже сущесвтующие данные
+  $old_terms_map = unserialize( file_get_contents(CACHE_EXCHANGE_DIR . '/groups.map') );
+  if( !is_array( $old_terms_map ) || sizeof($old_terms_map) < 1 )
+    $old_terms_map = array();
+
   $i = 0;
-  $terms_map = array();
+  // Переменная для новой карты
+  $new_terms_map = array();
   foreach ($terms as $tid => $term) {
     $i++;
 
     if($i <= $from)
       continue;
 
-    recursive_wp_insert_term($tid, $term, false, $terms_map );
+    recursive_wp_term($tid, $term, false, $old_terms_map, $new_terms_map );
 
     if( $i >= $to )
       break;
   }
 
-  if( sizeof($terms_map) >= 1 )
-    create_map($terms_map, CACHE_EXCHANGE_DIR . '/_groups.map');
+  // Записать карту в конец файла
+  if( sizeof($new_terms_map) >= 1 )
+    write_to_file($new_terms_map, CACHE_EXCHANGE_DIR . '/_groups.map', 'a');
 
   wp_die();
 }
 
-
 /**
  * Поправить записанные map'ы
  */
-function fix_map( $from, $to ){
-  $result = array();
-  $data = file(CACHE_EXCHANGE_DIR . '/' . $from);
+function fix_map( $new_filename, $old_filename ){
 
-  foreach (file(CACHE_EXCHANGE_DIR . '/' . $to) as $key => $value) {
-    $result[$key] = unserialize( $value );
+  $new_path = CACHE_EXCHANGE_DIR . '/' . $new_filename;
+  $new_data = file($new_path);
+
+  $old_path = CACHE_EXCHANGE_DIR . '/' . $old_filename;
+  $old_data = file_get_contents($old_path);
+  $data = (!empty($old_data)) ? unserialize( $old_data ) : array();
+
+  /**
+   * Если новых данных не найдено удаляем пустой файл
+   */
+  if( !is_array($new_data) || sizeof($new_data) < 1 ){
+    unlink( $new_path );
+    return;
   }
 
-  if( is_array($data) && sizeof($data) >= 1 ){
-    foreach ($data as $data_str) {
-
-      foreach ( unserialize($data_str) as $str ) {
-        foreach ( $str as $str_1c_id => $str_id ) {
-          $result[$str_1c_id] = $str_id;
-        }
+  // Каждую строку
+  foreach ($new_data as $data_str) {
+    // Преобразовать в масив
+    foreach ( unserialize($data_str) as $str ) {
+      // Вынимаем информацию из масива
+      foreach ( $str as $str_1c_id => $str_id ) {
+        // дозаписываем уже в готовый масив
+        $data[$str_1c_id] = $str_id;
       }
-
     }
   }
   
-  if( sizeof( $result ) >= 1 ) {
-    $fp = fopen( CACHE_EXCHANGE_DIR . '/' . $to, 'w');
-    fwrite($fp, serialize($result) );
-    fclose($fp);
-  }
-
+  /**
+   * Перезаписываем новый состыкованый масив в файл
+   */
+  write_to_file($result, $old_path, 'w' );
+  // Устаревшую полученую информацию удаляем
   unlink( CACHE_EXCHANGE_DIR . '/' . $from );
 }
 

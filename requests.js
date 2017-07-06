@@ -7,7 +7,7 @@ jQuery(document).ready(function($) {
 	ajaxdata.nonce = AJAX_VAR.nonce;
 
 	function start_products_update(ajaxdata){
-		$('#ajax_action').html('Старт выгрузки.');
+		$('#ajax_action').html('Выгрузка началась!');
 
 		$.ajax({
 			type: 'POST',
@@ -44,7 +44,7 @@ jQuery(document).ready(function($) {
 					
 				}
 			}
-		}).fail(function() { alert('AJAX Error'); });
+		}).fail(function() { alert('Случилась непредвиденая ошибка, попробуйте повторить позже'); });
 	}
 	
 	$('#load-products').on('click', function(event) {
