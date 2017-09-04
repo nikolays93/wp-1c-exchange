@@ -29,11 +29,8 @@ class ExchangeAdminPage
       echo "<div class='progress'><div class='progress-fill'></div></div>";
       echo "<div id='ajax_action'></div>";
 
-      $import = new ImportProducts();
-      $import->searchImportFiles();
-      echo 'Товаров: ' . $import->getProductsCount();
-      echo "<br>";
-      echo 'Категорий: ' . $import->getСategoriesСount();
+      echo 'Товаров: <span id="product_count"></span><br>';
+      echo 'Категорий: <span id="cat_count"></span>';
     }
 
     /**
@@ -78,14 +75,14 @@ class ExchangeAdminPage
           ),
         );
 
-      WPForm::render(
-        $data,
-        WPForm::active(self::SETTINGS_NAME, false, true),
-        true,
-        array('clear_value' => false, 'admin_page' => true)
-        );
+      // WPForm::render(
+      //   $data,
+      //   WPForm::active(self::SETTINGS_NAME, false, true),
+      //   true,
+      //   array('clear_value' => false, 'admin_page' => true)
+      //   );
 
-      submit_button();
+      // submit_button();
     }
 
     // function SideTermOptions(){

@@ -143,9 +143,9 @@ class ImportProducts
      */
     protected function update_product_cache()
     {
+        $p_count = 0;
         if( self::$importType == 'commerce2' ){
             $import = self::loadImportData();
-            $p_count = 0;
             /**
              * Записываем товары (для кэша)
              */
@@ -172,54 +172,77 @@ class ImportProducts
             $p_count += self::update_offers_cache();
         }
         elseif( self::$importType == 'csv' ) {
+            $products = array();
             foreach ($this->import_filename as $filename) {
                 $fileContent = file_get_contents(EXCHANGE_DIR . $filename);
                 if( ! preg_match('#.#u', $fileContent) ){
                     $fileContent = iconv('CP1251', 'UTF-8', $fileContent);
                 }
 
-                $file = explode("\n", $fileContent);
+                $file = explode(PHP_EOL, $fileContent);
                 $head = $file[0];
                 unset($file[0]);
 
                 foreach ($file as $fileStr) {
                     $arrFileStr = explode(';', $fileStr);
+                    if( empty($fileStr) || empty($arrFileStr[0]) ){
+                        continue;
+                    }
+
                     $_sku = $arrFileStr[0];
+                    $price = ExchangeUtils::sanitizePrice( $arrFileStr[4] );
 
                     $products[$_sku] = array(
+                        'title' => $arrFileStr[1],
+                        'content' => $arrFileStr[2],
+                        'terms' => array($arrFileStr[3]),
+                        );
+                    $products[$_sku]['metas'] = array(
                         '_sku' => $_sku,
-                        'tmc' => $arrFileStr[1],
-                        'full_name' => $arrFileStr[2],
-                        'category' => $arrFileStr[3],
-                        '_price' => ExchangeUtils::sanitizePrice( $arrFileStr[4] ),
-                        '_regular_price' => ExchangeUtils::sanitizePrice( $arrFileStr[4] ),
+                        '_price' => $price,
+                        '_regular_price' => $price,
                         '_stock' => $arrFileStr[5],
                         );
                     $products[$_sku]['attributes'] = array(
-                        'manufacturer' => $arrFileStr[6],
-                        'model' => $arrFileStr[7],
-                        'width' => $arrFileStr[8],
-                        'diametr' => $arrFileStr[9],
-                        'height' => $arrFileStr[10],
-                        'index' => $arrFileStr[11],
-                        'PCD' => $arrFileStr[12],
-                        'flying' => $arrFileStr[13],
-                        'DIA' => $arrFileStr[14],
-                        'color' => $arrFileStr[15],
+                        'manufacturer' => $arrFileStr[6], // proizvoditel
+                        'model' => $arrFileStr[7], // model
+                        'width' => $arrFileStr[8], // shirina
+                        'diametr' => $arrFileStr[9], // diametr
+                        'height' => $arrFileStr[10], // vysota
+                        'index' => $arrFileStr[11], // indeks
+                        'PCD' => $arrFileStr[12], // pcd
+                        'flying' => $arrFileStr[13], // vylet
+                        'DIA' => $arrFileStr[14], // dia
+                        'color' => $arrFileStr[15], // tsvet
                         // is_shina
                         // is_disc
-                        'seasonality' => $arrFileStr[16],
+                        'seasonality' => $arrFileStr[18], // sezon
                         );
+
+                    // $term_taxonomy_ids = wp_set_object_terms( get_the_ID(), 'ATTRIBUTE_VALUE', 'pa_ATTRIBUTE', true );
+                    // $thedata = Array(
+                    //      'pa_ATTRIBUTE'=>Array(
+                    //            'name'=>'pa_ATTRIBUTE',
+                    //            'value'=>'ATTRIBUTE_VALUE',
+                    //            'is_visible' => '1',
+                    //            'is_variation' => '1',
+                    //            'is_taxonomy' => '1'
+                    //      )
+                    // );
+                    // update_post_meta( get_the_ID(),'_product_attributes',$thedata);
+
+                    $p_count++;
                 }
             }
         }
 
         if( ! is_dir(EXCHANGE_DIR_CACHE) ) {
-            mkdir(EXCHANGE_DIR_CACHE, 770, true);
+            mkdir(EXCHANGE_DIR_CACHE, null, true);
         }
 
         file_put_contents( EXCHANGE_DIR_CACHE . '/products.cache', serialize($products));
 
+        return true;
         return $p_count;
     }
 
@@ -231,6 +254,7 @@ class ImportProducts
      */
     protected function update_categories_cache()
     {
+        $terms = array();
         $t_count = 0;
         if( self::$importType == 'commerce2' ) {
             $import = self::loadImportData();
@@ -268,14 +292,25 @@ class ImportProducts
                     $fileContent = iconv('CP1251', 'UTF-8', $fileContent);
                 }
 
-                $file = explode("\n", $fileContent);
+                $file = explode(PHP_EOL, $fileContent);
                 $head = $file[0];
                 unset($file[0]);
 
                 foreach ($file as $fileStr) {
+                    if( empty($fileStr) )
+                        continue;
+
                     $arrFileStr = explode(';', $fileStr);
 
-                    $terms[] = $arrFileStr[3];
+                    /**
+                     * @todo : see! its for TiresWorld Only
+                     */
+                    $terms[] = array(
+                        'name' => $arrFileStr[3],
+                        'is_shina' => $arrFileStr[16],
+                        'is_disc'  => $arrFileStr[17],
+                        );
+                    $t_count++;
                 }
             }
         }

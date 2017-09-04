@@ -51,4 +51,64 @@ class ExchangeUtils
 
         return $price;
     }
+
+    public static function get_item_map_id( $out )
+    {
+        global $wpdb;
+
+        $tablename = EXCHANGE_MAP;
+        $product = $wpdb->get_row(
+            $wpdb->prepare( "SELECT * FROM {$tablename} WHERE `out_item_id` = %s LIMIT 1;", $out )
+        );
+
+        return isset($product->item_id) ? (int)$product->item_id : false;
+    }
+
+    public static function update_item_map( $out, $id, $update_only = false )
+    {
+        global $wpdb;
+
+        if( $update_only || self::get_item_map_id( $out ) ){
+            $action = 'update';
+            $result = $wpdb->update(
+                EXCHANGE_MAP,
+                array( 'out_item_id' => $out, 'item_id' => $id ),
+                array( 'out_item_id' => $out ),
+                array( '%s', '%d' ),
+                array( '%s' )
+                );
+        }
+        else {
+            $action = 'create';
+            $result = $wpdb->insert(
+                EXCHANGE_MAP,
+                array( 'out_item_id' => $out, 'item_id' => $id ),
+                array( '%s', '%d' )
+                );
+        }
+
+        return array($result, $action);
+    }
+
+    public static function get_product_terms_from_map( $product = false )
+    {
+        if(!isset($product['terms']))
+            return null;
+
+        $post_terms = array();
+        if( is_array($product['terms']) ){
+            foreach ($product['terms'] as $out_cat_id) {
+                if( $term_id = self::get_item_map_id($out_cat_id) ) {
+                    $post_terms[] = $term_id;
+                }
+            }
+        }
+
+        if(sizeof($post_terms) < 1)
+            return null;
+
+        return array( 'product_cat' => $post_terms );
+    }
 }
+
+// var_dump( ExchangeUtils::get_item_map_id( 'ЗИМНИЕ ШИПУЕМЫЕ' ) );

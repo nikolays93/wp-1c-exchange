@@ -1,17 +1,14 @@
 jQuery(document).ready(function($) {
-	if( pagenow != 'woocommerce_page_exchange' )
-		return;
-
 	var ajaxdata = {};
 	ajaxdata.counter = 1;
-	ajaxdata.nonce = AJAX_VAR.nonce;
+	ajaxdata.nonce = request_settings.nonce;
 
 	function start_products_update(ajaxdata){
 		$('#ajax_action').html('Выгрузка началась!');
 
 		$.ajax({
 			type: 'POST',
-			url: AJAX_VAR.url,
+			url: ajaxurl,
 			data: ajaxdata,
 			success: function(response){
 				ajaxdata.counter++;
@@ -19,29 +16,10 @@ jQuery(document).ready(function($) {
 					start_products_update(ajaxdata);
 
 					var progrss = (100 / ajaxdata.update_count) * (ajaxdata.counter - 1);
-					if(progrss >= 100) progrss = 97;
 					$('.progress .progress-fill').css('width',  progrss + '%' );
 				}
 				else{
-					$('#ajax_action').html('Исправление кэш карты.');
-
-					var fixmap = { 'nonce' : AJAX_VAR.nonce };
-
-					fixmap.action = ( ajaxdata.action == 'insert_terms' ) ? 'fix_term_map' : 'fix_product_map';
-
-					$.ajax({
-						type : 'POST',
-						url: AJAX_VAR.url,
-						data : fixmap,
-						success: function(response){
-							$('#ajax_action').html('Выгрузка завершена!');
-
-							ajaxdata.counter = 0;
-							progrss = 0;
-							$('.progress .progress-fill').css('width', '100%' );
-						}
-					});
-
+					$('#ajax_action').html('Выгрузка завершена!');
 				}
 			}
 		}).fail(function() { alert('Случилась непредвиденая ошибка, попробуйте повторить позже'); });
@@ -51,9 +29,10 @@ jQuery(document).ready(function($) {
 		event.preventDefault();
 		$(this).removeClass('button-primary');
 
-		ajaxdata.action = 'insert_posts';
-		ajaxdata.update_count = Math.floor( $('#p_count').val() / AJAX_VAR.products_at_once ); // количество запросов
-		ajaxdata.at_once = AJAX_VAR.products_at_once;
+		ajaxdata.action = 'exchange_insert_posts';
+		ajaxdata.at_once = request_settings.products_at_once;
+		ajaxdata.update_count = Math.ceil( request_settings.products_count / ajaxdata.at_once ); // количество запросов
+
 		start_products_update(ajaxdata);
 	});
 
@@ -61,11 +40,13 @@ jQuery(document).ready(function($) {
 		event.preventDefault();
 
 		$(this).removeClass('button-primary');
-		ajaxdata.action = 'insert_terms';
-		ajaxdata.update_count = Math.floor( $('#t_count').val() / AJAX_VAR.products_at_once ); // количество запросов
-		ajaxdata.at_once = AJAX_VAR.products_at_once;
+		ajaxdata.action = 'exchange_insert_terms';
+		ajaxdata.at_once = request_settings.products_at_once;
+		ajaxdata.update_count = Math.ceil( request_settings.cats_count / ajaxdata.at_once ); // количество запросов
+
 		start_products_update(ajaxdata);
 	});
 
-
+	$('#product_count').html( request_settings.products_count );
+	$('#cat_count').html( request_settings.cats_count );
 });
