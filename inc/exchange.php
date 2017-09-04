@@ -2,35 +2,37 @@
 
 // rename callbacks
 // replace all AJAX_ACTION_NAME
-// replace all AJAX_VAR
+// replace all request_settings
 // change any_secret_string
 
 /**
  * Add Script Variables
  *
  * Подключаем нужные скрипты и
- * Передаем скрипту requests.js переменную AJAX_VAR
+ * Передаем скрипту requests.js переменную request_settings
  */
 add_action( 'admin_enqueue_scripts', 'add_ajax_data', 99 );
 function add_ajax_data(){
   /**
    * screen->id изменяется если изменить положение сслыки в меню.
    */
-  $screen = get_current_screen();
-  if( $screen->id != 'woocommerce_page_exchange' )
-    return;
+  if( $screen = get_current_screen() ){
+    if( $screen->id != 'woocommerce_page_exchange' )
+      return;
 
-  wp_enqueue_script( 'products_request', NEW_PLUG_URL . '/requests.js', 'jquery', '1.0' );
-  wp_enqueue_style( 'products_request-css', NEW_PLUG_URL . '/exchange.css', null, '1.0' );
+    wp_enqueue_script( 'products_request', EXCHANGE_PLUG_URL . '/requests.js', 'jquery', '1.0' );
+    wp_enqueue_style( 'products_request-css', EXCHANGE_PLUG_URL . '/exchange.css', null, '1.0' );
 
-  $o = get_option(NEW_OPTION);
-  wp_localize_script('products_request', 'AJAX_VAR',
-    array(
-      'url'      => admin_url('admin-ajax.php'),
-      'nonce'    => wp_create_nonce( 'any_secret_string' ),
-      'products_at_once' => isset($o['update_count']) ? intval($o['update_count']) : 40,
-    )
-  );
+    $o = get_option( ExchangeAdminPage::SETTINGS_NAME );
+    wp_localize_script(
+      'products_request',
+      'request_settings',
+      array(
+        'nonce'    => wp_create_nonce( 'any_secret_string' ),
+        'products_at_once' => isset($o['update_count']) ? intval($o['update_count']) : 40,
+        )
+      );
+  }
 }
 
 /**
@@ -54,11 +56,10 @@ function add_product_meta($pid, $product, $post_id){
   update_post_meta( $post_id, '_manage_stock', "yes" );
   update_post_meta( $post_id, '_stock', $product['offer'][$pid]['stock']);
   update_post_meta( $post_id, '_stock_status', $product['offer'][$pid]['stock'] > 0 ? 'instock' : 'outofstock');
-  
+
   if( isset($product['offer'][$pid]['stock_wh']) && is_array($product['offer'][$pid]['stock_wh']) )
     update_post_meta( $post_id, '_stock_wh', serialize( $product['offer'][$pid]['stock_wh'] ) );
-  
-  
+
   update_post_meta( $post_id, '_backorders', "no" );
   update_post_meta( $post_id, '_sold_individually', "" );
 
@@ -106,7 +107,7 @@ add_action('wp_ajax_insert_posts', 'exchange_insert_posts');
 function exchange_insert_posts() {
   if( ! wp_verify_nonce( $_POST['nonce'], 'any_secret_string' ) )
     wp_die('Ошибка! нарушены правила безопасности');
-  
+
   $to = $_POST['at_once'] * $_POST['counter'];
   $from = $to - $_POST['at_once'];
 
@@ -141,7 +142,6 @@ function exchange_insert_posts() {
     else {
       $post_id = wp_insert_post( $args );
     }
-    
 
     if( is_wp_error($post_id) )
       return;

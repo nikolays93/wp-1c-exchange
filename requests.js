@@ -26,7 +26,7 @@ jQuery(document).ready(function($) {
 					$('#ajax_action').html('Исправление кэш карты.');
 
 					var fixmap = { 'nonce' : AJAX_VAR.nonce };
-					
+
 					fixmap.action = ( ajaxdata.action == 'insert_terms' ) ? 'fix_term_map' : 'fix_product_map';
 
 					$.ajax({
@@ -41,12 +41,12 @@ jQuery(document).ready(function($) {
 							$('.progress .progress-fill').css('width', '100%' );
 						}
 					});
-					
+
 				}
 			}
 		}).fail(function() { alert('Случилась непредвиденая ошибка, попробуйте повторить позже'); });
 	}
-	
+
 	$('#load-products').on('click', function(event) {
 		event.preventDefault();
 		$(this).removeClass('button-primary');
@@ -67,5 +67,5 @@ jQuery(document).ready(function($) {
 		start_products_update(ajaxdata);
 	});
 
-	
+
 });
