@@ -1,8 +1,4 @@
 jQuery(document).ready(function($) {
-	var ajaxdata = {};
-	ajaxdata.counter = 1;
-	ajaxdata.nonce = request_settings.nonce;
-
 	function start_products_update(ajaxdata){
 		$('#ajax_action').html('Выгрузка началась!');
 		$.ajax({
@@ -25,38 +21,29 @@ jQuery(document).ready(function($) {
 		}).fail(function() { alert('Случилась непредвиденая ошибка, попробуйте повторить позже'); });
 	}
 
+	var ajaxdata = {};
+	ajaxdata.nonce = request_settings.nonce;
 	ajaxdata.at_once = request_settings.products_at_once;
 
-	$('#load-products').on('click', function(event) {
+	$('#load-products.button-primary').on('click', function(event) {
 		event.preventDefault();
 		$(this).removeClass('button-primary');
 
+		ajaxdata.counter = 1;
 		ajaxdata.action = 'exchange_insert_posts';
 		ajaxdata.update_count = Math.ceil( request_settings.products_count / ajaxdata.at_once ); // количество запросов
 
 		start_products_update(ajaxdata);
 	});
 
-	$('#load-categories').on('click', function(event) {
+	$('#load-categories.button-primary').on('click', function(event) {
 		event.preventDefault();
-
 		$(this).removeClass('button-primary');
+
+		ajaxdata.counter = 1;
 		ajaxdata.action = 'exchange_insert_terms';
 		ajaxdata.update_count = Math.ceil( request_settings.cats_count / ajaxdata.at_once ); // количество запросов
 
 		start_products_update(ajaxdata);
 	});
-
-	$('#load-atts').on('click', function(event) {
-		event.preventDefault();
-
-		$(this).removeClass('button-primary');
-		ajaxdata.action = 'exchange_insert_atts';
-		ajaxdata.update_count = Math.ceil( request_settings.products_count / ajaxdata.at_once ); // количество запросов
-
-		start_products_update(ajaxdata);
-	});
-
-	$('#product_count').html( request_settings.products_count );
-	$('#cat_count').html( request_settings.cats_count );
 });

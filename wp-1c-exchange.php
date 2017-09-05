@@ -19,10 +19,10 @@ License URI: http://www.gnu.org/licenses/gpl-2.0.html
  */
 
 if ( ! defined( 'ABSPATH' ) )
-  exit; // disable direct access
+    exit; // disable direct access
 
 if( ! is_admin() )
-  return;
+    return;
 
 global $wpdb;
 
@@ -35,27 +35,36 @@ define('EXCHANGE_DIR_CACHE', EXCHANGE_DIR . '/_cache' );
 
 define('EXCHANGE_MAP', $wpdb->get_blog_prefix() . 'exchenged_items_map');
 
-function load_exchange_plugin() {
-  require_once EXCHANGE_PLUG_DIR . '/inc/class/wp-admin-page-render.php';
-  require_once EXCHANGE_PLUG_DIR . '/inc/class/wp-form-render.php';
-  require_once EXCHANGE_PLUG_DIR . '/inc/class/wc-product-settings.php';
+add_filter( 'exchange_update_att_status', 'allow_created_only', 10, 1 );
+function allow_created_only( $defaults ){
+    return array('created');
+}
 
-  require_once EXCHANGE_PLUG_DIR . '/inc/utilites.php';
-  require_once EXCHANGE_PLUG_DIR . '/inc/product-fields.php';
-  require_once EXCHANGE_PLUG_DIR . '/inc/import.php';
-  require_once EXCHANGE_PLUG_DIR . '/inc/admin-page.php';
-  require_once EXCHANGE_PLUG_DIR . '/inc/exchange.php';
+function load_exchange_plugin() {
+    require_once EXCHANGE_PLUG_DIR . '/includes/libs/wp-admin-page-render.php';
+    require_once EXCHANGE_PLUG_DIR . '/includes/libs/wp-form-render.php';
+    require_once EXCHANGE_PLUG_DIR . '/includes/libs/wc-product-settings.php';
+
+    require_once EXCHANGE_PLUG_DIR . '/includes/utilites.php';
+    require_once EXCHANGE_PLUG_DIR . '/includes/class-exchange.php';
+    require_once EXCHANGE_PLUG_DIR . '/includes/class-exchange-category.php';
+    require_once EXCHANGE_PLUG_DIR . '/includes/class-exchange-product.php';
+    require_once EXCHANGE_PLUG_DIR . '/includes/is-admin.php';
+
+    $import = new Exchange();
+    $import->setImportFiles();
+    $import->setImportType();
+    $import->updateCache();
 }
 add_action('init', 'load_exchange_plugin', 20);
+add_action('init', array('Exchange', 'init'), 30);
 
 register_activation_hook( __FILE__, 'install_exchange_plugin');
 function install_exchange_plugin() {
-  require_once EXCHANGE_PLUG_DIR . '/install.php';
+    require_once EXCHANGE_PLUG_DIR . '/install.php';
 }
 
 register_deactivation_hook( __FILE__, 'uninstall_exchange_plugin');
 function uninstall_exchange_plugin() {
-  require_once EXCHANGE_PLUG_DIR . '/uninstall.php';
+    require_once EXCHANGE_PLUG_DIR . '/uninstall.php';
 }
-
-// var_dump( update_product_map_item('value_test', 18) );
