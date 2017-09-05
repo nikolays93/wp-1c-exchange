@@ -12,8 +12,8 @@ class ExchangeAdminPage
         self::SETTINGS_NAME,
         array(
           'parent' => 'woocommerce',
-          'title' => __('Загрузка товаров 1C'),
-          'menu' => __('Загрузка товаров 1C'),
+          'title' => __('Импорт товаров из 1C'),
+          'menu' => __('Импорт товаров из 1C'),
           ),
         array(__CLASS__, 'render'),
         self::SETTINGS_NAME,
@@ -57,7 +57,10 @@ class ExchangeAdminPage
       ?>
       <p><button type='button' class='button button-primary' id='load-categories'>Загрузить категории</button></p>
       <p><button type='button' class='button button-primary' id='load-products'>Загрузить товар</button></p>
+      <p><button type='button' class='button button-primary' id='load-atts'>Загрузить аттрибуты</button></p>
       <?php
+
+      // var_dump( wc_get_attribute_taxonomies() );
 
       $data = array(
         // array(

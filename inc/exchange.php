@@ -171,14 +171,14 @@ function exchange_insert_posts() {
  * Записывает категории товаров
  */
 
-define('SHINA_ID', '17');
-define('DISC_ID', '');
+define('SHINA_ID', 15);
+define('DISC_ID', 16);
 
 
 /**
  * Insert hierarchical terms
  */
-function recursive_add_wp_term( $id, $data, $parent = false ){
+function recursive_add_wp_term( $id, $data, $parent = false ) {
   /**
    * @todo: see! it's for TiresWorld only
    */
@@ -233,19 +233,95 @@ function exchange_insert_terms() {
   $from = $to - $_POST['at_once'];
   $to = $_POST['at_once'] * $_POST['counter'];
 
+    $i = 0;
+    foreach ($terms as $tid => $term) {
+        // @todo: TiresWorld
+        $tid = $term['name'];
+        $i++;
+
+        if($i <= $from)
+            continue;
+
+        recursive_add_wp_term($tid, $term, false );
+
+        if( $i >= $to )
+            break;
+    }
+
+  wp_die();
+}
+
+/**
+ * Insert WooCoommerce Attributes
+ */
+add_action('wp_ajax_exchange_insert_atts', 'exchange_insert_atts');
+function exchange_insert_atts() {
+  if( ! wp_verify_nonce( $_POST['nonce'], 'any_secret_string' ) ) {
+    wp_die('Ошибка! нарушены правила безопасности');
+  }
+
+  $products = unserialize( file_get_contents(EXCHANGE_DIR_CACHE . '/products.cache') );
+  if( !is_array($products) )
+    wp_die();
+
+  $to = $_POST['at_once'] * $_POST['counter'];
+  $from = $to - $_POST['at_once'];
+
   $i = 0;
-  foreach ($terms as $tid => $term) {
-    // tiresWorld
-    $tid = $term['name'];
+  foreach ($products as $pid => $product) {
     $i++;
 
     if($i <= $from)
-      continue;
+        continue;
 
-    recursive_add_wp_term($tid, $term, false );
+    /**
+     * Update Attributes
+     *
+     * $product['attributes'] = array(
+     *   'manufacturer' => $arrFileStr[6], // proizvoditel
+     *   'model' => $arrFileStr[7], // model
+     *   'width' => $arrFileStr[8], // shirina
+     *   'diametr' => $arrFileStr[9], // diametr
+     *   'height' => $arrFileStr[10], // vysota
+     *   'index' => $arrFileStr[11], // indeks
+     *   'PCD' => $arrFileStr[12], // pcd
+     *   'flying' => $arrFileStr[13], // vylet
+     *   'DIA' => $arrFileStr[14], // dia
+     *   'color' => $arrFileStr[15], // tsvet
+     *   'seasonality' => $arrFileStr[18], // sezon
+     * );
+     */
+
+    $attributes = array();
+    foreach ($product['attributes'] as $attr_key => $attr_val) {
+        $attr = new \stdClass();
+        switch ($attr_key) {
+            case 'manufacturer': $attr->attribute_label = 'Производитель'; break;
+            case 'model': $attr->attribute_label = 'Модель'; break;
+            case 'width': $attr->attribute_label = 'Ширина'; break;
+            case 'diametr': $attr->attribute_label = 'Диаметр'; break;
+            case 'height': $attr->attribute_label = 'Высота'; break;
+            case 'index': $attr->attribute_label = 'Индекс'; break;
+            case 'pcd': $attr->attribute_label = 'PCD'; break;
+            case 'flying': $attr->attribute_label = 'Вылет'; break;
+            case 'dia': $attr->attribute_label = 'DIA'; break;
+            case 'color': $attr->attribute_label = 'Цвет'; break;
+            case 'seasonality': $attr->attribute_label = 'Сезонность'; break;
+        }
+
+        if( !isset($attr->attribute_label) )
+            continue;
+
+        $attr->attribute_name = $attr_key;
+        $attr->attribute_value = $attr_val;
+        $attributes[] = $attr;
+    }
+
+    $id = ExchangeUtils::get_item_map_id( $product['_sku'] );
+    ExchangeUtils::updateProductAttributes($id, $attributes);
 
     if( $i >= $to )
-      break;
+        break;
   }
 
   wp_die();

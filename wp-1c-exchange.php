@@ -1,9 +1,9 @@
 <?php
 /*
-Plugin Name: 1c exchange
+Plugin Name: Импорт продукции организации
 Plugin URI:
-Description:
-Version: 1.2.1b
+Description: Импорт товаров (и товарных предложений) и категорий из 1C в WooCoommerce.
+Version: 1.2.2b
 Author: NikolayS93
 Author URI: https://vk.com/nikolays_93
 Author EMAIL: nikolayS93@ya.ru
@@ -15,6 +15,7 @@ License URI: http://www.gnu.org/licenses/gpl-2.0.html
  * @todo : добавить выбор экспортируемых файлов
  * @todo : перейти на классы
  * @todo : добавить выбор обновляемых атрибутов
+ * @todo : Даже если карта существует проверять наличие записи
  */
 
 if ( ! defined( 'ABSPATH' ) )
@@ -45,7 +46,7 @@ function load_exchange_plugin() {
   require_once EXCHANGE_PLUG_DIR . '/inc/admin-page.php';
   require_once EXCHANGE_PLUG_DIR . '/inc/exchange.php';
 }
-add_action('plugins_loaded', 'load_exchange_plugin');
+add_action('init', 'load_exchange_plugin', 20);
 
 register_activation_hook( __FILE__, 'install_exchange_plugin');
 function install_exchange_plugin() {
@@ -56,8 +57,5 @@ register_deactivation_hook( __FILE__, 'uninstall_exchange_plugin');
 function uninstall_exchange_plugin() {
   require_once EXCHANGE_PLUG_DIR . '/uninstall.php';
 }
-
-
-
 
 // var_dump( update_product_map_item('value_test', 18) );
