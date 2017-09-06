@@ -13,6 +13,14 @@ class Exchange
     protected $offersFilename = 'offers0_1.xml';
     protected $strRawImport, $strRawOffers;
 
+    private static $instance = null;
+    public static function get_instance() {
+        if ( ! isset( self::$instance ) )
+            self::$instance = new self;
+
+        return self::$instance;
+    }
+
     static function init(){
         add_action( 'admin_enqueue_scripts', array(__CLASS__, 'enqueue_scripts'), 10 );
         add_action( 'wp_ajax_exchange_update_cache', array('Exchange_Category', 'updateCache') );

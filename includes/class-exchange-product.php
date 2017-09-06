@@ -109,9 +109,9 @@ class Exchange_Product
              */
             if( in_array($status, apply_filters( 'exchange_update_def_meta_status', array('updated', 'created') ) ) ) {
                 $self->arrMeta = wp_parse_args( $self->arrMeta, array(
-                    '_sku' => '',
-                    '_1c_sku' => $self->_sku,
-                    '_1c_id'  => $self->_sku,
+                    '_sku' => $self->_sku,
+                    // '_1c_sku' => $self->_sku,
+                    // '_1c_id'  => $self->_sku,
 
                     '_price' => '',
                     '_regular_price' => '',
