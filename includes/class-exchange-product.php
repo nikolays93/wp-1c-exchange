@@ -120,8 +120,6 @@ class Exchange_Product
                     '_sale_price_dates_from' => '',
                     '_sale_price_dates_to'   => '',
 
-                    '_stock' => 0,
-
                     'total_sales' => 0,
 
                     '_tax_status' => 'taxable',
@@ -130,6 +128,12 @@ class Exchange_Product
                     '_manage_stock' => 'yes',
                     '_stock' => 0,
                     '_stock_status' => 'outofstock',
+
+                    /**
+                     * for 2.5.2 version
+                     */
+                    '_visibility' => 'visible',
+                    '_featured'   => 'no',
 
                     '_backorders' => 'no',
                     '_sold_individually' => '',

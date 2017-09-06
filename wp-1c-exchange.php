@@ -39,8 +39,8 @@ define('EXCHANGE_DIR_CACHE', EXCHANGE_DIR . '/_cache' );
 
 define('EXCHANGE_MAP', $wpdb->get_blog_prefix() . 'exchenged_items_map');
 
-define('SHINA_ID', 1);
-define('DISC_ID', 2);
+define('SHINA_ID', 95);
+define('DISC_ID', 96);
 
 add_filter( 'exchange_update_att_status', 'on_created_only', 10, 1 );
 add_filter( 'exchange_update_def_meta_status', 'on_created_only', 10, 1 );
