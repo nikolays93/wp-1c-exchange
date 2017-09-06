@@ -7,7 +7,9 @@ jQuery(document).ready(function($) {
 			data: ajaxdata,
 			success: function(response){
 				ajaxdata.counter++;
-				if(ajaxdata.counter - 1 <= ajaxdata.update_count){
+				$('#log').val(response);
+
+				if(ajaxdata.counter - 1 < ajaxdata.update_count){
 					start_products_update(ajaxdata);
 
 					var progrss = (100 / ajaxdata.update_count) * (ajaxdata.counter - 1);
@@ -16,6 +18,7 @@ jQuery(document).ready(function($) {
 				else{
 					$('.progress .progress-fill').css('width', '100%' );
 					$('#ajax_action').html('Выгрузка завершена!');
+					alert( new Date() );
 				}
 			}
 		}).fail(function() { alert('Случилась непредвиденая ошибка, попробуйте повторить позже'); });
@@ -41,8 +44,8 @@ jQuery(document).ready(function($) {
 		$(this).removeClass('button-primary');
 
 		ajaxdata.counter = 1;
+		ajaxdata.update_count = 1; // количество запросов
 		ajaxdata.action = 'exchange_insert_terms';
-		ajaxdata.update_count = Math.ceil( request_settings.cats_count / ajaxdata.at_once ); // количество запросов
 
 		start_products_update(ajaxdata);
 	});

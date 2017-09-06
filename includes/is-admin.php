@@ -31,6 +31,12 @@ class ExchangeAdminPage
 
       echo 'Товаров: <span id="product_count">'.Exchange::$countProducts.'</span><br>';
       echo 'Категорий: <span id="cat_count">'.Exchange::$countCategories.'</span>';
+
+      echo "<textarea name='logs' id='logs' cols='30' rows='10' style='width:100%;resize:vertical;margin:20px 0;'></textarea>";
+      echo "<pre>";
+      var_dump( unserialize( file_get_contents(EXCHANGE_DIR_CACHE . '/' . Exchange_Category::FILE) ) );
+      // var_dump( unserialize( file_get_contents(EXCHANGE_DIR_CACHE . '/' . Exchange_Product::FILE) ) );
+      echo "</pre>";
     }
 
     /**

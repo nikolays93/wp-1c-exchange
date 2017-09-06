@@ -51,7 +51,7 @@ class Exchange_Utils
     {
         global $wpdb;
 
-        if( $update_only || self::get_item_map_id( $out ) ){
+        if( self::get_item_map_id( $out ) ){
             $action = 'updated';
             $result = $wpdb->update(
                 EXCHANGE_MAP,
@@ -75,12 +75,12 @@ class Exchange_Utils
 
     public static function get_product_terms_from_map( $product = false )
     {
-        if(!isset($product['terms']))
+        if(!isset($product->terms))
             return null;
 
         $post_terms = array();
-        if( is_array($product['terms']) ){
-            foreach ($product['terms'] as $out_cat_id) {
+        if( is_array($product->terms) ){
+            foreach ($product->terms as $out_cat_id) {
                 if( $term_id = self::get_item_map_id($out_cat_id) ) {
                     $post_terms[] = $term_id;
                 }

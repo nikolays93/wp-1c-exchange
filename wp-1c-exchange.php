@@ -26,6 +26,10 @@ if( ! is_admin() )
 
 global $wpdb;
 
+// debug only
+define('EXCHANGE_DEBUG', 1);
+
+
 define('EXCHANGE_PLUG_DIR', rtrim( plugin_dir_path( __FILE__ ), '/' ) );
 define('EXCHANGE_PLUG_URL', rtrim( plugins_url( basename(__DIR__) ), '/' ) );
 
@@ -35,8 +39,12 @@ define('EXCHANGE_DIR_CACHE', EXCHANGE_DIR . '/_cache' );
 
 define('EXCHANGE_MAP', $wpdb->get_blog_prefix() . 'exchenged_items_map');
 
-add_filter( 'exchange_update_att_status', 'allow_created_only', 10, 1 );
-function allow_created_only( $defaults ){
+define('SHINA_ID', 1);
+define('DISC_ID', 2);
+
+add_filter( 'exchange_update_att_status', 'on_created_only', 10, 1 );
+add_filter( 'exchange_update_def_meta_status', 'on_created_only', 10, 1 );
+function on_created_only( $defaults ){
     return array('created');
 }
 

@@ -1,6 +1,6 @@
 <?php
 
-class Exchange_Product extends Cached_Item
+class Exchange_Product
 {
     const FILE = 'products.cache';
 
@@ -31,55 +31,12 @@ class Exchange_Product extends Cached_Item
 
     function setMetas( $metas )
     {
-        $metas = wp_parse_args( $metas, array(
-            //'_sku' => '',
-            '_1c_sku' => $this->_sku,
-            '_1c_id'  => $this->_sku,
-
-            '_price' => '',
-            '_regular_price' => '',
-
-            '_sale_price' => '',
-            '_sale_price_dates_from' => '',
-            '_sale_price_dates_to'   => '',
-
-            '_stock' => 0,
-
-            'total_sales' => 0,
-
-            '_tax_status' => 'taxable',
-            '_tax_class'  => '',
-
-            '_manage_stock' => 'yes',
-            '_stock' => 0,
-            '_stock_status' => 'outofstock',
-
-            '_backorders' => 'no',
-            '_sold_individually' => '',
-
-            '_weight' => '',
-            '_length' => '',
-            '_width'  => '',
-            '_height' => '',
-
-            '_upsell_ids'    => 'a:0:{}',
-            '_crosssell_ids' => 'a:0:{}',
-
-            '_purchase_note' => '',
-            '_default_attributes' => "a:0:{}",
-            '_virtual' => 'no',
-            '_downloadable' => 'no',
-            '_product_image_gallery' => '',
-            '_download_limit' => '-1',
-            '_download_expiry' => '-1',
-            '_product_version' => '3.0.6',
-            ) );
-
         $this->arrMeta = $metas;
-        $this->arrMeta['_price'] =         Exchange_Utils::sanitizePrice( $metas['_price'] );
-        $this->arrMeta['_regular_price'] = Exchange_Utils::sanitizePrice( $metas['_regular_price'] );
-        $this->arrMeta['_sale_price'] =    Exchange_Utils::sanitizePrice( $metas['_sale_price'] );
-        if( $metas['_stock'] >= 1 ) $this->arrMeta['_stock_status'] = 'instock';
+
+        if( isset($metas['_price']) ) {
+            $this->arrMeta['_price'] = Exchange_Utils::sanitizePrice( $metas['_price'] );
+            $this->arrMeta['_regular_price'] = Exchange_Utils::sanitizePrice( $metas['_price'] );
+        }
     }
 
     function setAttributes( $arrAttributes )
@@ -126,7 +83,7 @@ class Exchange_Product extends Cached_Item
                 /**
                  * @todo  rewrite get_product_terms_from_map
                  */
-                 // 'tax_input' => Exchange_Utils::get_product_terms_from_map($product),
+                 'tax_input' => Exchange_Utils::get_product_terms_from_map($self),
                 );
 
             if( $post_id = Exchange_Utils::get_item_map_id( $pid ) ) {
@@ -150,6 +107,56 @@ class Exchange_Product extends Cached_Item
             /**
              * Update Metas
              */
+            if( in_array($status, apply_filters( 'exchange_update_def_meta_status', array('updated', 'created') ) ) ) {
+                $self->arrMeta = wp_parse_args( $self->arrMeta, array(
+                    '_sku' => '',
+                    '_1c_sku' => $self->_sku,
+                    '_1c_id'  => $self->_sku,
+
+                    '_price' => '',
+                    '_regular_price' => '',
+
+                    '_sale_price' => '',
+                    '_sale_price_dates_from' => '',
+                    '_sale_price_dates_to'   => '',
+
+                    '_stock' => 0,
+
+                    'total_sales' => 0,
+
+                    '_tax_status' => 'taxable',
+                    '_tax_class'  => '',
+
+                    '_manage_stock' => 'yes',
+                    '_stock' => 0,
+                    '_stock_status' => 'outofstock',
+
+                    '_backorders' => 'no',
+                    '_sold_individually' => '',
+
+                    '_weight' => '',
+                    '_length' => '',
+                    '_width'  => '',
+                    '_height' => '',
+
+                    '_upsell_ids'    => 'a:0:{}',
+                    '_crosssell_ids' => 'a:0:{}',
+
+                    '_purchase_note' => '',
+                    '_default_attributes' => "a:0:{}",
+                    '_virtual' => 'no',
+                    '_downloadable' => 'no',
+                    '_product_image_gallery' => '',
+                    '_download_limit' => '-1',
+                    '_download_expiry' => '-1',
+                    '_product_version' => '3.0.6',
+                    ) );
+            }
+
+            if( $self->arrMeta['_stock'] >= 1 ) {
+                $self->arrMeta['_stock_status'] = 'instock';
+            }
+
             foreach ($self->arrMeta as $meta_key => $meta_value) {
                 update_post_meta( $post_id, $meta_key, $meta_value);
             }

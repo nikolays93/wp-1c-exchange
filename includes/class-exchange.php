@@ -1,8 +1,4 @@
 <?php
-abstract class Cached_Item
-{
-    abstract public static function insertOrUpdate();
-}
 
 class Exchange
 {
@@ -19,6 +15,7 @@ class Exchange
 
     static function init(){
         add_action( 'admin_enqueue_scripts', array(__CLASS__, 'enqueue_scripts'), 10 );
+        add_action( 'wp_ajax_exchange_update_cache', array('Exchange_Category', 'updateCache') );
         add_action( 'wp_ajax_exchange_insert_terms', array('Exchange_Category', 'insertOrUpdate') );
         add_action( 'wp_ajax_exchange_insert_posts', array('Exchange_Product', 'insertOrUpdate') );
     }
@@ -110,7 +107,8 @@ class Exchange
         }
 
         $filenames = $this->arrImportFilenames;
-        $filenames['offers'] = $this->offersFilename;
+        if( $this->offersFilename )
+            $filenames['offers'] = $this->offersFilename;
 
         foreach($filenames as $key => $filename){
             if( is_readable(EXCHANGE_DIR . '/' . $filename) ) {
@@ -125,7 +123,8 @@ class Exchange
                     continue;
                 }
 
-                $this->strRawImport .= $fileContent . PHP_EOL;
+                // Без первой строки
+                $this->strRawImport .= substr($fileContent, strpos($fileContent, PHP_EOL) ) . PHP_EOL;
             }
         }
     }
@@ -166,7 +165,7 @@ class Exchange
         }
         elseif( $this->type === 'csv' ) {
             $raw = explode(PHP_EOL, $this->strRawImport);
-            $head = array_shift($raw);
+            // $head = array_shift($raw);
 
             $categories = array();
             foreach ($raw as $strRaw) {
@@ -178,6 +177,7 @@ class Exchange
                 /**
                  * @todo recursive child levels
                  */
+                if($arrFileStr[3] == 'category') var_dump( $arrFileStr );
                 $category = new Exchange_Category( $arrFileStr[3] );
 
                 /**
@@ -186,8 +186,10 @@ class Exchange
                 $category->is_shina = $arrFileStr[16] ? 1 : 0;
                 $category->is_disc  = $arrFileStr[17] ? 1 : 0;
 
-                $categories[] = $category;
+                $categories[ $arrFileStr[3] ] = $category;
             }
+
+            Exchange::$countCategories = sizeof($categories);
 
             if( ! is_dir(EXCHANGE_DIR_CACHE) ) {
                 mkdir(EXCHANGE_DIR_CACHE, 777, true);
