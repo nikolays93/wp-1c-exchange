@@ -32,9 +32,7 @@ if ( !function_exists('array_map_recursive') ) {
 	}
 }
 
-if( class_exists('WPAdminPageRender') )
-	return;
-
+if( ! class_exists('WPAdminPageRender') ) :
 class WPAdminPageRender
 {
 	const ver = '2.0';
@@ -336,3 +334,4 @@ class WPAdminPageRender
 		return $inputs;
 	}
 }
+endif;
