@@ -97,6 +97,7 @@ class Exchange_Category
             $_term = wp_insert_term( $self->name, 'product_cat', $args );
         }
 
+
         // if( defined('EXCHANGE_DEBUG') && EXCHANGE_DEBUG ) {
         //     echo $self->name . " need " . $status . '. has parent : ' . $self->parent . PHP_EOL;
         //     print_r($args);
@@ -110,9 +111,9 @@ class Exchange_Category
             return array('term_id' => 0);
         }
 
-        // echo '1:' .$_term['term_id'] . ':' . $status . PHP_EOL;
-        // echo $id, (int)$_term['term_id'], PHP_EOL;
-        Exchange_Utils::update_item_map( $id, (int)$_term['term_id'] );
+        update_term_meta( $_term['term_id'], 'external_id', $self->name );
+
+        Exchange_Utils::update_item_map( $self->name, (int)$_term['term_id'] );
 
         return $_term;
     }

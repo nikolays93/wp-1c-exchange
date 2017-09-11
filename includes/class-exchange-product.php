@@ -80,10 +80,6 @@ class Exchange_Product
                 'post_status' => "publish",
                 'post_parent' => '',
                 'post_type' => "product",
-                /**
-                 * @todo  rewrite get_product_terms_from_map
-                 */
-                 'tax_input' => Exchange_Utils::get_product_terms_from_map($self),
                 );
 
             if( $post_id = Exchange_Utils::get_item_map_id( $pid ) ) {
@@ -102,6 +98,13 @@ class Exchange_Product
             if( is_wp_error($post_id) )
               return;
 
+            if( $post_id > 0 ) {
+                $arrTerm = explode('/', $self->terms[0]);
+                $term_id = get_term_id_from_external(str_replace('\\', '', end( $arrTerm )));
+
+                wp_set_object_terms( $post_id, (int)$term_id, 'product_cat', false );
+            }
+
             Exchange_Utils::update_item_map( $pid, $post_id );
 
             /**
@@ -110,8 +113,8 @@ class Exchange_Product
             if( in_array($status, apply_filters( 'exchange_update_def_meta_status', array('updated', 'created') ) ) ) {
                 $self->arrMeta = wp_parse_args( $self->arrMeta, array(
                     '_sku' => $self->_sku,
-                    // '_1c_sku' => $self->_sku,
-                    // '_1c_id'  => $self->_sku,
+                    // '_external_sku' => $self->_sku,
+                    // '_external_id'  => $self->_sku,
 
                     '_price' => '',
                     '_regular_price' => '',
@@ -194,7 +197,7 @@ class Exchange_Product
                     $attributes[] = $attr;
                 }
 
-                Exchange_Utils::updateProductAttributes($post_id, $attributes);
+                self::updateProductAttributes($post_id, $attributes);
             }
 
             if( $i >= $to )
@@ -202,6 +205,154 @@ class Exchange_Product
         }
 
         wp_die();
+    }
+
+        /**
+     * @param string $attribute_name Attribute slug without pa_
+     */
+    // updateWooAtt
+    public static function updateProductAttribute( $attribute_name, $attribute_label = false, $args = false )
+    {
+        global $wpdb;
+
+        $tablename = $wpdb->prefix . 'woocommerce_attribute_taxonomies';
+        // $attribute = $wpdb->get_row(
+        //     $wpdb->prepare( "SELECT * FROM {$tablename} WHERE `attribute_name` = %s LIMIT 1;", $attribute_name )
+        // );
+
+        $attribute = false;
+        $attribute_taxonomies = wc_get_attribute_taxonomies();
+        if( !is_array($attribute_taxonomies) ) {
+            $attribute_taxonomies = array();
+        }
+
+        foreach ($attribute_taxonomies as $_attr) {
+            if( $_attr->attribute_name == $attribute_name ){
+                $attribute = $_attr;
+                break;
+            }
+        }
+
+        if( $attribute_label ) {
+            if( $attribute ){
+                $args = array(
+                    'attribute_id'      => $attribute->attribute_id,
+                    'attribute_name'    => $attribute->attribute_name,
+                    'attribute_label'   => $attribute_label,
+                    'attribute_type'    => $attribute->attribute_type,
+                    'attribute_orderby' => $attribute->attribute_orderby,
+                    'attribute_public'  => $attribute->attribute_public,
+                    );
+
+                $result = $wpdb->update(
+                    $tablename,
+                    $args,
+                    array( 'attribute_id' => $attribute->attribute_id ),
+                    array( '%d', '%s', '%s', '%s', '%s', '%d' ),
+                    array( '%d' )
+                    );
+                $action = 'updated';
+            }
+            else {
+                $args = wp_parse_args( $args, array(
+                    'attribute_name' => $attribute_name,
+                    'attribute_label' => $attribute_label,
+                    'attribute_type' => 'select',
+                    'attribute_orderby' => 'menu_order',
+                    'attribute_public' => 0,
+                    ) );
+
+                $result = $wpdb->insert(
+                    $tablename,
+                    $args,
+                    array( '%s', '%s', '%s', '%s', '%d' )
+                    );
+
+                if( ! $result ) {
+                    return false;
+                }
+
+                $args['attribute_id'] = $wpdb->insert_id;
+                $action = 'created';
+            }
+
+            $attribute = (object)$args;
+
+            // set_transient( 'wc_attribute_taxonomies', $attribute_taxonomies );
+            delete_transient( 'wc_attribute_taxonomies' );
+        }
+
+        $result = new stdClass();
+        $result->attribute = $attribute;
+        $result->action    = $action;
+        return $result;
+    }
+
+    /**
+     * Обновить значение атрибута товара
+     * Создать таксаномию(Атрибут), теримн(Значение атрибута) если понадобится
+     *
+     * @param  absint   $post_id ID записи которой задаем аттрибуты
+     * @param  array    $atts    Масив с объектами атрибутов
+     * @param  boolean  $append  Добавить значения к сущетвующим если true
+     */
+    public static function updateProductAttributes( $post_id, $atts, $append = false )
+    {
+        /**
+         * Получаем аттрибуты, если их нет, задаем пустой массив
+         *
+         * @attention: $product_attributes has pa_
+         *             unlike $atts && updateWooAtt()
+         */
+        $product_attributes = ($append) ? get_post_meta( $post_id, '_product_attributes', true ) : array();
+
+        if( !is_array($product_attributes) ) {
+            $product_attributes = array();
+        }
+
+        foreach ($atts as $att) {
+            /**
+             * @var stdClass $att объект атрибута
+             *
+             * @prop attribute_name
+             * @prop attribute_label
+             * @prop attribute_value
+             */
+            $pa_tax = 'pa_' . htmlspecialchars( stripslashes($att->attribute_name) );
+            self::updateWooAtt( $att->attribute_name, $att->attribute_label );
+
+            $term_id = self::get_item_map_id( $att->attribute_value );
+            $insert = ( $term_id ) ? (int)$term_id : $att->attribute_value;
+
+            if( term_exists( $insert, $pa_tax ) ){
+                $current_term = wp_update_term( $insert, $pa_tax, array(
+                    'name' => $att->attribute_value,
+                    ) );
+            }
+            else {
+                $current_term = wp_insert_term( $insert, $pa_tax );
+            }
+
+            if( is_wp_error($current_term) )
+                continue;
+
+            if( ! $term_id ) {
+                self::update_item_map( $att->attribute_value, (int)$current_term['term_id'] );
+            }
+
+            $test = wp_set_object_terms( $post_id, (int)$current_term['term_id'], $pa_tax, $append );
+
+            $product_attributes[] = array (
+              'name' => $pa_tax,
+              'value' => $att->attribute_value,
+              'position' => 5,
+              'is_visible' => 1,
+              'is_variation' => 1,
+              'is_taxonomy' => 1
+              );
+        }
+
+        update_post_meta($post_id, '_product_attributes', $product_attributes);
     }
 
     // function add_product_meta($pid, $product, $post_id){

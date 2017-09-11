@@ -7,8 +7,6 @@ jQuery(document).ready(function($) {
 			data: ajaxdata,
 			success: function(response){
 				ajaxdata.counter++;
-				$('#log').val(response);
-
 				if(ajaxdata.counter - 1 < ajaxdata.update_count){
 					start_products_update(ajaxdata);
 
