@@ -18,6 +18,11 @@ $page->add_metabox( 'exchange_box', __('Выгрузить'), 'ex_settings_sideb
 $page->set_metaboxes();
 
 function ex_settings_page() {
+  $import = new Exchange();
+  $import->setImportFiles();
+  $import->setImportType();
+  $import->updateCache();
+  
   echo "<div class='progress'><div class='progress-fill'></div></div>";
   echo "<div id='ajax_action'></div>";
 

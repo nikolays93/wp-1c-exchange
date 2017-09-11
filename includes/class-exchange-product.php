@@ -34,8 +34,8 @@ class Exchange_Product
         $this->arrMeta = $metas;
 
         if( isset($metas['_price']) ) {
-            $this->arrMeta['_price'] = Exchange_Utils::sanitizePrice( $metas['_price'] );
-            $this->arrMeta['_regular_price'] = Exchange_Utils::sanitizePrice( $metas['_price'] );
+            $this->arrMeta['_price'] = sanitize_price( $metas['_price'] );
+            $this->arrMeta['_regular_price'] = sanitize_price( $metas['_price'] );
         }
     }
 

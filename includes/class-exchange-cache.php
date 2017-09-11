@@ -2,6 +2,9 @@
 
 class Exchange_Cache extends Exchange
 {
+    const cache_type = 'sql';
+    const delimiter = ';';
+
     protected $strRawImport, $strRawOffers;
 
     function updateCache()
@@ -23,10 +26,11 @@ class Exchange_Cache extends Exchange
             return $this->strRawImport;
         }
 
-        $filenames = $this->arrImportFilenames;
-        if( $this->offersFilename )
-            $filenames['offers'] = $this->offersFilename;
+        $filenames = parent::$arrImportFilenames;
+        if( parent::$offersFilename )
+            $filenames['offers'] = parent::$offersFilename;
 
+        $i = 0;
         foreach($filenames as $key => $filename){
             if( is_readable(EXCHANGE_DIR . '/' . $filename) ) {
                 $fileContent = file_get_contents(EXCHANGE_DIR . '/' . $filename);
@@ -40,14 +44,18 @@ class Exchange_Cache extends Exchange
                     continue;
                 }
 
-                // Без первой строки
-                $this->strRawImport .= substr($fileContent, strpos($fileContent, PHP_EOL) ) . PHP_EOL;
+                // Первая строка только у первого файла.
+                $str = ($i == 0) ? $fileContent : substr($fileContent, strpos($fileContent, PHP_EOL) );
+                $this->strRawImport .= $str . PHP_EOL;
+                $i++;
             }
         }
     }
 
     protected function updateCategoriesCache()
     {
+        global $wpdb;
+
         /**
          * @todo rewrite legacy code
          */
@@ -81,20 +89,25 @@ class Exchange_Cache extends Exchange
             }
         }
         elseif( parent::$type === 'csv' ) {
-            $raw = explode(PHP_EOL, $this->strRawImport);
-            // $head = array_shift($raw);
+            $fstrpos = strpos($this->strRawImport, PHP_EOL);
+
+            // th
+            $head = trim(substr($this->strRawImport, 0, $fstrpos ));
+            $arrHead = explode(PHP_EOL, $head);
+
+            // body
+            $raw = explode(PHP_EOL, substr($this->strRawImport, $fstrpos) );
 
             $categories = array();
             foreach ($raw as $strRaw) {
                 if( empty($strRaw) )
                     continue;
 
-                $arrFileStr = explode(';', $strRaw);
+                $arrFileStr = explode(self::delimiter, $strRaw);
 
                 /**
                  * @todo recursive child levels
                  */
-                if($arrFileStr[3] == 'category') var_dump( $arrFileStr );
                 $category = new Exchange_Category( $arrFileStr[3] );
 
                 /**
@@ -107,17 +120,44 @@ class Exchange_Cache extends Exchange
             }
 
             Exchange::$countCategories = sizeof($categories);
+            if( self::cache_type == 'sql' ) {
+                foreach ($categories as $category) {
+                    $catData = array(
+                        'exid' => $category->name,
+                        'parent' => $category->parent,
+                        'type' => 'cat',
+                        'meta' =>  serialize( array(
+                            'is_shina' => $category->is_shina,
+                            'is_disc' => $category->is_disc,
+                            ) ),
+                        );
+                    $db = EXCHANGE_CACHE;
+                    $exists = $wpdb->get_var(
+                        $wpdb->prepare("SELECT id FROM {$db} WHERE `exid` = %s LIMIT 1", $category->name)
+                        );
 
-            if( ! is_dir(EXCHANGE_DIR_CACHE) ) {
-                mkdir(EXCHANGE_DIR_CACHE, 777, true);
+                    if( $exists !== NULL ) {
+                        $wpdb->update( $db, $catData, array('exid' => $category->name) );
+                    }
+                    else {
+                        $wpdb->insert( $db, $catData );
+                    }
+                }
             }
+            else {
+                if( ! is_dir(EXCHANGE_DIR_CACHE) ) {
+                    mkdir(EXCHANGE_DIR_CACHE, 777, true);
+                }
 
-            file_put_contents( EXCHANGE_DIR_CACHE . '/' . Exchange_Category::FILE, serialize($categories) );
+                file_put_contents( EXCHANGE_DIR_CACHE . '/' . Exchange_Category::FILE, serialize($categories) );
+            }
         }
     }
 
     protected function updateProductsCache()
     {
+        global $wpdb;
+
         if( parent::$type == 'commerce2' ){
             $import = self::loadImportData();
             /**
@@ -146,8 +186,15 @@ class Exchange_Cache extends Exchange
             $p_count += self::update_offers_cache();
         }
         elseif( parent::$type == 'csv' ) {
-            $raw = explode(PHP_EOL, $this->strRawImport);
-            $head = array_shift($raw);
+
+            $fstrpos = strpos($this->strRawImport, PHP_EOL);
+
+            // th
+            $head = trim(substr($this->strRawImport, 0, $fstrpos ));
+            $arrHead = explode(PHP_EOL, $head);
+
+            // body
+            $raw = explode(PHP_EOL, substr($this->strRawImport, $fstrpos) );
 
             $products = array();
             foreach ($raw as $strRaw) {
@@ -159,21 +206,13 @@ class Exchange_Cache extends Exchange
                     continue;
                 }
 
-
-                $_product = new Exchange_Product( array(
-                    '_sku'    => $arrFileStr[0],
-                    'title'   => $arrFileStr[1],
-                    'content' => $arrFileStr[2],
-                    'terms'   => array($arrFileStr[3]),
-                    ) );
-
-                $_product->setMetas( array(
+                $metas = array(
                     '_price' => $arrFileStr[4],
                     '_regular_price' => $arrFileStr[4],
                     '_stock' => $arrFileStr[5],
-                    ) );
+                    );
 
-                $_product->setAttributes( array(
+                $atts = array(
                     'manufacturer' => $arrFileStr[6], // proizvoditel
                     'model' => $arrFileStr[7], // model
                     'width' => $arrFileStr[8], // shirina
@@ -185,17 +224,55 @@ class Exchange_Cache extends Exchange
                     'dia' => $arrFileStr[14], // dia
                     'color' => $arrFileStr[15], // tsvet
                     'seasonality' => $arrFileStr[18], // sezon
-                    ) );
+                    );
 
-                $products[ $arrFileStr[0] ] = $_product;
+                if( self::cache_type == 'sql' ) {
+                    $pData = array(
+                        'exid' => $arrFileStr[0], // sku
+                        'title' => $arrFileStr[1],
+                        'content' => $arrFileStr[2],
+                        'type' => 'product',
+                        'parent' => '',
+                        'meta' =>  serialize( $metas ),
+                        'terms' => serialize( array($arrFileStr[3]) ),
+                        'atts' => serialize( $atts ),
+                        );
+                    $db = EXCHANGE_CACHE;
+                    $exists = $wpdb->get_var(
+                        $wpdb->prepare("SELECT exid FROM {$db} WHERE `exid` = %s LIMIT 1", $arrFileStr[0])
+                        );
+
+                    if( $exists !== NULL ) {
+                        $wpdb->update( $db, $pData, array('exid' => $arrFileStr[0]) );
+                    }
+                    else {
+                        var_dump( $wpdb->insert( $db, $pData ) );
+                    }
+
+                    Exchange::$countProducts++;
+                }
+                else {
+                    $_product = new Exchange_Product( array(
+                        '_sku'    => $arrFileStr[0],
+                        'title'   => $arrFileStr[1],
+                        'content' => $arrFileStr[2],
+                        'terms'   => array($arrFileStr[3]),
+                        ) );
+
+                    $_product->setMetas( $metas );
+
+                    $_product->setAttributes( $atts );
+
+                    $products[ $arrFileStr[0] ] = $_product;
+
+                    if( ! is_dir(EXCHANGE_DIR_CACHE) ) {
+                        mkdir(EXCHANGE_DIR_CACHE, 777, true);
+                    }
+
+                    file_put_contents( EXCHANGE_DIR_CACHE . '/' . Exchange_Product::FILE, serialize($products) );
+                }
             }
         }
-
-        if( ! is_dir(EXCHANGE_DIR_CACHE) ) {
-            mkdir(EXCHANGE_DIR_CACHE, 777, true);
-        }
-
-        file_put_contents( EXCHANGE_DIR_CACHE . '/' . Exchange_Product::FILE, serialize($products) );
 
         $this->updateAttributesCache();
         $this->updateOffersCache();

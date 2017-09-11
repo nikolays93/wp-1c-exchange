@@ -9,29 +9,14 @@ class Exchange
     public static $countProducts = 0;
     public static $countCategories = 0;
 
-    protected $arrImportFilenames = array('import0_1.xml');
-    protected $offersFilename = 'offers0_1.xml';
-
-    public static $errors;
-    private static $instance = null;
-    public static function get_instance() {
-        if ( ! isset( self::$instance ) ) {
-            self::$errors = new WP_Error();
-            self::$instance = new self;
-        }
-
-        return self::$instance;
-    }
+    protected static $arrImportFilenames = array('import0_1.xml');
+    protected static $offersFilename = 'offers0_1.xml';
 
     static function init(){
         add_action( 'admin_enqueue_scripts', array(__CLASS__, 'enqueue_scripts'), 10 );
         add_action( 'wp_ajax_exchange_update_cache', array(__CLASS__, 'updateCache') );
         add_action( 'wp_ajax_exchange_insert_terms', array('Exchange_Category', 'insertOrUpdate') );
         add_action( 'wp_ajax_exchange_insert_posts', array('Exchange_Product', 'insertOrUpdate') );
-    }
-
-    public static function add_log_notice($code, $message, $data = '') {
-        self::$errors->add($code, $message, $data);
     }
 
     /**
@@ -44,27 +29,27 @@ class Exchange
      */
     public function setImportFiles( $files = null )
     {
-        $this->arrImportFilenames = array();
+        self::$arrImportFilenames = array();
         if( is_string($files) ) {
-            $this->arrImportFilenames = array( $files );
+            self::$arrImportFilenames = array( $files );
         }
         elseif( is_array($files) ) {
             foreach ($files as $k => $file) {
                 if( $k === 'offers' ) {
-                    $this->offersFilename = $file;
+                    self::$offersFilename = $file;
                     continue;
                 }
 
-                $this->arrImportFilenames[] = $file;
+                self::$arrImportFilenames[] = $file;
             }
         }
         else {
-            $this->offersFilename = false;
+            self::$offersFilename = false;
 
             if( $dir = opendir( EXCHANGE_DIR ) ) {
                 while (($file = readdir($dir)) !== false) {
                     if( is_file(EXCHANGE_DIR . '/' . $file) && ! in_array($file, array('.', '..')) ) {
-                        $this->arrImportFilenames[] =  $file;
+                        self::$arrImportFilenames[] =  $file;
                     }
                 }
             }
@@ -84,7 +69,7 @@ class Exchange
          * Проверяем расширение первого файла
          */
         if( ! $type ) {
-            $end = explode('.', $this->arrImportFilenames[0]);
+            $end = explode('.', self::$arrImportFilenames[0]);
             $file_extension = end( $end );
             if( $file_extension == 'csv' ) {
                 self::$type = 'csv';
