@@ -35,6 +35,7 @@
 	background-color: #e5e5e5;
 }
 #exchange-logs {
+	padding: 8px 14px;
 	width:100%;
 	resize:vertical;
 	margin:20px 0;

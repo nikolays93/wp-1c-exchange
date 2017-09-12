@@ -120,6 +120,20 @@ class Exchange_Cache
                     continue;
                 }
 
+                if( $this->type === 'csv' ) {
+                    $strContent = explode(PHP_EOL, $fileContent);
+                    foreach ($strContent as $numStr => $content) {
+                        if( $numStr == 0 ) {
+                            $head = sizeof( explode(';', $content) );
+                            continue;
+                        }
+
+                        if($head !== sizeof( explode(';', $content) ) ) {
+                            $numStr++;
+                            self::$errors[] = 'Фальшивый разделитель на строке ' . $numStr . ' (' . $filename . ')';
+                        }
+                    }
+                }
                 // Первая строка только у первого файла.
                 $str = ($i == 0) ? $fileContent : substr($fileContent, strpos($fileContent, PHP_EOL) );
                 $this->strRawImport .= $str . PHP_EOL;
