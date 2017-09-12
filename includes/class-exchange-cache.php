@@ -1,9 +1,22 @@
 <?php
 
-class Exchange_Cache extends Exchange
+class Exchange_Cache
 {
+    protected $type = 'CommerceML2.0';
+
+    protected $arrImportFilenames = array('import0_1.xml');
+    protected $offersFilename = 'offers0_1.xml';
+
+    public static $countProducts = 0;
+    public static $countCategories = 0;
+
     protected $strRawImport, $strRawOffers;
 
+    /**
+     * Обновить кэш для дальнейшего импорта
+     *
+     * @todo recursive (получать полную вложеность категорий для CommerceML)
+     */
     function updateCache()
     {
         $this->compileRawContent();
@@ -11,6 +24,68 @@ class Exchange_Cache extends Exchange
         $this->updateCategoriesCache();
         $this->updateProductsCache();
     }
+
+    /**
+     * Determine import files
+     *
+     * @param string|array $files имя файла(String) или файлов(Array)
+     * Добавьте ключ 'offers' для торговых предложений
+     * Не указывайте имена файлов для автоматического определения файла
+     * Старайтесь не указывать кирилические имена файлам
+     */
+    public function setImportFiles( $files = null )
+    {
+        $this->arrImportFilenames = array();
+        if( is_string($files) ) {
+            $this->arrImportFilenames = array( $files );
+        }
+        elseif( is_array($files) ) {
+            foreach ($files as $k => $file) {
+                if( $k === 'offers' ) {
+                    $this->offersFilename = $file;
+                    continue;
+                }
+
+                $this->arrImportFilenames[] = $file;
+            }
+        }
+        else {
+            $this->offersFilename = false;
+
+            if( $dir = opendir( EXCHANGE_DIR ) ) {
+                while (($file = readdir($dir)) !== false) {
+                    if( is_file(EXCHANGE_DIR . '/' . $file) && ! in_array($file, array('.', '..')) ) {
+                        $this->arrImportFilenames[] =  $file;
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * Determine import type
+     *
+     * @param string $type Можно указать тип вручную
+     * Если тип не задан, пытаемся определить самостоятельно.
+     * Поддерживается 2 типа импорта: csv | CommerceML2.0
+     */
+    public function setImportType( $type = null )
+    {
+        /**
+         * Проверяем расширение первого файла
+         */
+        if( ! $type ) {
+            $end = explode('.', $this->arrImportFilenames[0]);
+            $file_extension = end( $end );
+            if( $file_extension == 'csv' ) {
+                $this->type = 'csv';
+            }
+        }
+        else {
+            $this->type = $type;
+        }
+    }
+
     /**
      * Convert files content to one
      *
@@ -51,7 +126,7 @@ class Exchange_Cache extends Exchange
         /**
          * @todo rewrite legacy code
          */
-        if( parent::$type === 'CommerceML2.0' ) {
+        if( $this->type === 'CommerceML2.0' ) {
             $import = self::loadImportData();
             foreach( $import->Классификатор->Группы->Группа as $_group ) {
                 $gid =   (string) $_group->Ид;
@@ -80,7 +155,7 @@ class Exchange_Cache extends Exchange
                 }
             }
         }
-        elseif( parent::$type === 'csv' ) {
+        elseif( $this->type === 'csv' ) {
             $raw = explode(PHP_EOL, $this->strRawImport);
             // $head = array_shift($raw);
 
@@ -106,7 +181,7 @@ class Exchange_Cache extends Exchange
                 $categories[ $arrFileStr[3] ] = $category;
             }
 
-            Exchange::$countCategories = sizeof($categories);
+            self::$countCategories = sizeof($categories);
 
             if( ! is_dir(EXCHANGE_DIR_CACHE) ) {
                 mkdir(EXCHANGE_DIR_CACHE, 777, true);
@@ -118,7 +193,7 @@ class Exchange_Cache extends Exchange
 
     protected function updateProductsCache()
     {
-        if( parent::$type == 'commerce2' ){
+        if( $this->type == 'commerce2' ){
             $import = self::loadImportData();
             /**
              * Записываем товары (для кэша)
@@ -145,7 +220,7 @@ class Exchange_Cache extends Exchange
 
             $p_count += self::update_offers_cache();
         }
-        elseif( parent::$type == 'csv' ) {
+        elseif( $this->type == 'csv' ) {
             $raw = explode(PHP_EOL, $this->strRawImport);
             $head = array_shift($raw);
 

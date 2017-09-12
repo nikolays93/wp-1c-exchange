@@ -2,29 +2,75 @@
 
 define('EXCHANGE_PAGE', 'exchange');
 
+add_action( 'admin_enqueue_scripts', 'ex_page_enqueue_scripts', 10 );
+
+/**
+ * Add Script Variables
+ *
+ * Подключаем нужные скрипты
+ * Передаем скрипту requests.js переменную request_settings
+ */
+function ex_page_enqueue_scripts(){
+    if( $screen = get_current_screen() ){
+        if( $screen->id != 'woocommerce_page_exchange' )
+            return;
+
+        wp_enqueue_script( 'products_request', EXCHANGE_PLUG_URL . '/resources/requests.js', 'jquery', '1.0' );
+        wp_enqueue_style( 'products_request-css', EXCHANGE_PLUG_URL . '/resources/exchange.css', null, '1.0' );
+
+        wp_localize_script(
+            'products_request',
+            'request_settings',
+            array(
+                'nonce'    => wp_create_nonce( EXCHANGE_SECURITY ),
+                'products_at_once' => 50,
+                'products_count' => Exchange_Cache::$countProducts,
+                'cats_count'     => Exchange_Cache::$countCategories,
+                )
+            );
+    }
+}
+
+/**
+ * Add AJAX Actions
+ *
+ * Добавляем WordPress hookи для работы с AJAX
+ */
+add_action( 'wp_ajax_exchange_update_cache', 'ex_update_cache' );
+add_action( 'wp_ajax_exchange_insert_terms', array('Exchange_Category', 'insertOrUpdate') );
+add_action( 'wp_ajax_exchange_insert_posts', array('Exchange_Product', 'insertOrUpdate') );
+
+function ex_update_cache() {
+    $cache = new Exchange_Cache();
+    $cache->setImportFiles();
+    $cache->setImportType();
+    $cache->updateCache();
+}
+
 $page = new WP_Admin_Page();
 $page->set_args( EXCHANGE_PAGE, array(
-  'parent'      => 'woocommerce',
-  'title'       => __('Импорт товаров'),
-  'menu'        => __('Импорт товаров'),
-  'callback'    => 'ex_settings_page',
+    'parent'      => 'woocommerce',
+    'title'       => __('Импорт товаров'),
+    'menu'        => __('Импорт товаров'),
+    'callback'    => 'ex_settings_page',
   //'validate'    => 'ex_settings_validate',
-  'permissions' => 'manage_options',
-  'tab_sections'=> null,
-  'columns'     => 2,
-  ) );
+    'permissions' => 'manage_options',
+    'tab_sections'=> null,
+    'columns'     => 2,
+    ) );
+$page->add_metabox( 'exchange_import', __('Импорт'), 'ex_settings_sidebar', 'side');
+$page->add_metabox( 'exchange_timer', __('Затраченное время'), 'ex_settings_timer', 'side');
 
-$page->add_metabox( 'exchange_box', __('Выгрузить'), 'ex_settings_sidebar', 'side');
+$page->add_metabox( 'exchange_debug', __('Информация о кэшировании'), 'ex_settings_debug', 'normal');
 $page->set_metaboxes();
 
 function ex_settings_page() {
-  echo "<div class='progress'><div class='progress-fill'></div></div>";
-  echo "<div id='ajax_action'></div>";
-
-  echo 'Товаров: <span id="product_count">'.Exchange::$countProducts.'</span><br>';
-  echo 'Категорий: <span id="cat_count">'.Exchange::$countCategories.'</span>';
-
-  // echo "<textarea name='logs' id='logs' cols='30' rows='10' style='width:100%;resize:vertical;margin:20px 0;'></textarea>";
+    ex_update_cache();
+    echo "<div class='progress'><div class='progress-fill'></div></div>";
+    echo "<div id='ajax_action'></div>";
+    echo 'Товаров: <span id="product_count">'.Exchange_Cache::$countProducts.'</span><br>';
+    echo 'Категорий: <span id="cat_count">'.Exchange_Cache::$countCategories.'</span>';
+    echo "<textarea name='logs' id='exchange-logs' cols='30' rows='10' style='width:100%;resize:vertical;margin:20px 0;'></textarea>";
   // echo "<pre>";
   // var_dump( unserialize( file_get_contents(EXCHANGE_DIR_CACHE . '/' . Exchange_Category::FILE) ) );
   // var_dump( unserialize( file_get_contents(EXCHANGE_DIR_CACHE . '/' . Exchange_Product::FILE) ) );
@@ -33,8 +79,73 @@ function ex_settings_page() {
 
 function ex_settings_sidebar() {
   ?>
-  <p><button type='button' class='button button-primary' id='load-categories'>Загрузить категории</button></p>
-  <p><button type='button' class='button button-primary' id='load-products'>Загрузить товар</button></p>
+  <table class="widefat">
+    <tr>
+      <td><input type="checkbox" name="" id="ex_categories" checked="true"></td>
+      <td><label for="ex_categories">Импорт категорий</label></td>
+    </tr>
+    <tr>
+      <td><input type="checkbox" name="" id="ex_attributes" checked="true"></td>
+      <td><label for="ex_attributes">Импорт аттрибутов</label></td>
+    </tr>
+    <tr>
+      <td><input type="checkbox" name="" id="ex_products" checked="true"></td>
+      <td><label for="ex_products">Импорт товаров</label></td>
+    </tr>
+  </table>
+  <p>
+    <button type="button" class="button button-danger right" id="stop-exchange">Остановить импорт</button>
+    <button type="button" class="button button-primary" id="exchangeit" data-action="start">Начать</button>
+  </p>
+  <p>
+    <small>
+      <span style="color: red;">*</span> Пауза не прерывает последний запрос, а останавливает импорт после него.
+    </small>
+  </p>
+
+  <!-- <p><button type='button' class='button button-primary' id='load-categories'>Загрузить категории</button></p> -->
+  <!-- <p><button type='button' class='button button-primary' id='load-products'>Загрузить товар</button></p> -->
+  <?php
+}
+
+function ex_settings_timer() {
+  ?>
+  <div id="timer" class='ex-timer'>
+    <span class='hours'>0</span>:<span class='minutes'>00</span>:<span class='seconds'>00</span>
+  </div>
+  <?php
+}
+
+function ex_settings_debug() {
+  ?>
+  <table class="widefat striped" id="cache-report">
+    <tr>
+      <td>Кэшированно товаров</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <td>Товаров на сайте</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <td>Кэшированно категорий</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <td>Категорий на сайте</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <td>Кэшированно аттрбутов</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <td>Аттрбутов на сайте</td>
+      <td>0</td>
+    </tr>
+  </table>
+  <p><button type="button" class="button button-primary right">Обновить кэш</button></p>
+  <div class="clear"></div>
   <?php
 }
 
@@ -60,3 +171,4 @@ function ex_settings_validate( $inputs ) {
 //   ) );
 
 // $wc_fields->set_fields();
+

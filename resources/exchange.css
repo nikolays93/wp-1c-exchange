@@ -14,3 +14,23 @@
 	width: 0%;
 	transition: 0.4s ease width;
 }
+.button.button-danger {
+	color: #fff;
+	background-color: #d9534f;
+	border-color: #d43f3a;
+}
+.button.button-danger:hover {
+	color: #fff;
+	background-color: #d9534f;
+	border-color: #d43f3a;
+	opacity: 0.9;
+}
+.ex-timer {
+	font-size: 36px;
+	line-height: 40px;
+	text-align: center;
+	color: #333;
+}
+#cache-report {
+	background-color: #e5e5e5;
+}

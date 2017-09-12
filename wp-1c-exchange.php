@@ -3,7 +3,7 @@
 Plugin Name: Импорт продукции организации
 Plugin URI:
 Description: Импорт товаров (и товарных предложений) и категорий из 1C в WooCoommerce.
-Version: 1.2.3b
+Version: 1.3.1
 Author: NikolayS93
 Author URI: https://vk.com/nikolays_93
 Author EMAIL: nikolayS93@ya.ru
@@ -38,7 +38,8 @@ define('EXCHANGE_DIR', $upload_dir['basedir'] . '/exchange' );
 define('EXCHANGE_DIR_CACHE', EXCHANGE_DIR . '/_cache' );
 
 define('EXCHANGE_MAP', $wpdb->get_blog_prefix() . 'exchenged_items_map');
-define('EXCHANGE_CACHE', $wpdb->get_blog_prefix() . 'exchenge_items_cache');
+define('EXCHANGE_SECURITY', 'Secret');
+
 
 define('SHINA_ID', 78989);
 define('DISC_ID', 78990);
@@ -51,23 +52,15 @@ function on_created_only( $defaults ){
 
 function load_exchange_plugin() {
     require_once EXCHANGE_PLUG_DIR . '/includes/libs/class-wp-admin-page.php';
-    require_once EXCHANGE_PLUG_DIR . '/includes/libs/wp-form-render.php';
     require_once EXCHANGE_PLUG_DIR . '/includes/libs/wc-product-settings.php';
 
     require_once EXCHANGE_PLUG_DIR . '/includes/utilites.php';
-    require_once EXCHANGE_PLUG_DIR . '/includes/class-exchange.php';
     require_once EXCHANGE_PLUG_DIR . '/includes/class-exchange-cache.php';
     require_once EXCHANGE_PLUG_DIR . '/includes/class-exchange-category.php';
     require_once EXCHANGE_PLUG_DIR . '/includes/class-exchange-product.php';
     require_once EXCHANGE_PLUG_DIR . '/includes/is-admin.php';
-
-    $import = new Exchange();
-    $import->setImportFiles();
-    $import->setImportType();
-    $import->updateCache();
 }
 add_action('init', 'load_exchange_plugin', 20);
-add_action('init', array('Exchange', 'init'), 30);
 
 register_activation_hook( __FILE__, 'install_exchange_plugin');
 function install_exchange_plugin() {
