@@ -9,8 +9,11 @@ class Exchange_Cache
 
     public static $countProducts = 0;
     public static $countCategories = 0;
+    public static $countAttributes = 0;
 
     protected $strRawImport, $strRawOffers;
+
+    public static $errors = array();
 
     /**
      * Обновить кэш для дальнейшего импорта
@@ -21,7 +24,7 @@ class Exchange_Cache
     {
         $this->compileRawContent();
 
-        $this->updateCategoriesCache();
+        $this->updateTermsCache();
         $this->updateProductsCache();
     }
 
@@ -99,10 +102,12 @@ class Exchange_Cache
         }
 
         $filenames = $this->arrImportFilenames;
-        if( $this->offersFilename )
+        if( $this->offersFilename ) {
             $filenames['offers'] = $this->offersFilename;
+        }
 
-        foreach($filenames as $key => $filename){
+        $i = 0;
+        foreach($filenames as $key => $filename) {
             if( is_readable(EXCHANGE_DIR . '/' . $filename) ) {
                 $fileContent = file_get_contents(EXCHANGE_DIR . '/' . $filename);
 
@@ -115,13 +120,15 @@ class Exchange_Cache
                     continue;
                 }
 
-                // Без первой строки
-                $this->strRawImport .= substr($fileContent, strpos($fileContent, PHP_EOL) ) . PHP_EOL;
+                // Первая строка только у первого файла.
+                $str = ($i == 0) ? $fileContent : substr($fileContent, strpos($fileContent, PHP_EOL) );
+                $this->strRawImport .= $str . PHP_EOL;
+                $i++;
             }
         }
     }
 
-    protected function updateCategoriesCache()
+    function updateTermsCache()
     {
         /**
          * @todo rewrite legacy code
@@ -156,10 +163,19 @@ class Exchange_Cache
             }
         }
         elseif( $this->type === 'csv' ) {
-            $raw = explode(PHP_EOL, $this->strRawImport);
-            // $head = array_shift($raw);
+            $fstrpos = strpos($this->strRawImport, PHP_EOL);
+
+            // th
+            $head = trim(substr($this->strRawImport, 0, $fstrpos ));
+            $arrHead = explode(';', $head);
+
+            // body
+            $raw = explode(PHP_EOL, substr($this->strRawImport, $fstrpos) );
 
             $categories = array();
+            $attributes = array();
+
+            $attsIndex = array(6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 18);
             foreach ($raw as $strRaw) {
                 if( empty($strRaw) )
                     continue;
@@ -169,7 +185,6 @@ class Exchange_Cache
                 /**
                  * @todo recursive child levels
                  */
-                if($arrFileStr[3] == 'category') var_dump( $arrFileStr );
                 $category = new Exchange_Category( $arrFileStr[3] );
 
                 /**
@@ -179,6 +194,17 @@ class Exchange_Cache
                 $category->is_disc  = $arrFileStr[17] ? 1 : 0;
 
                 $categories[ $arrFileStr[3] ] = $category;
+
+                foreach ($attsIndex as $index) {
+                    if( $arrFileStr[$index] ) {
+                        $attributes[ $arrHead[$index] ][] = trim( $arrFileStr[$index] );
+                    }
+                }
+            }
+
+            foreach ($attributes as $att_key => &$attribute) {
+                $attribute = array_unique($attribute);
+                self::$countAttributes++;
             }
 
             self::$countCategories = sizeof($categories);
@@ -188,10 +214,11 @@ class Exchange_Cache
             }
 
             file_put_contents( EXCHANGE_DIR_CACHE . '/' . Exchange_Category::FILE, serialize($categories) );
+            file_put_contents( EXCHANGE_DIR_CACHE . '/' . 'attributes.cache', serialize($attributes) );
         }
     }
 
-    protected function updateProductsCache()
+    function updateProductsCache()
     {
         if( $this->type == 'commerce2' ){
             $import = self::loadImportData();
@@ -221,25 +248,45 @@ class Exchange_Cache
             $p_count += self::update_offers_cache();
         }
         elseif( $this->type == 'csv' ) {
-            $raw = explode(PHP_EOL, $this->strRawImport);
-            $head = array_shift($raw);
+            $fstrpos = strpos($this->strRawImport, PHP_EOL);
+
+            // th
+            // $head = trim(substr($this->strRawImport, 0, $fstrpos ));
+            // $arrHead = explode(';', $head);
+            // $headSize = sizeof( $arrHead );
+
+            // body
+            $raw = explode(PHP_EOL, substr($this->strRawImport, $fstrpos) );
 
             $products = array();
-            foreach ($raw as $strRaw) {
+            foreach ($raw as $strCount => $strRaw) {
                 if( empty($strRaw) )
                     continue;
 
                 $arrFileStr = explode(';', $strRaw);
+
                 if( empty($strRaw) || empty($arrFileStr[0]) ){
                     continue;
                 }
-
 
                 $_product = new Exchange_Product( array(
                     '_sku'    => $arrFileStr[0],
                     'title'   => $arrFileStr[1],
                     'content' => $arrFileStr[2],
                     'terms'   => array($arrFileStr[3]),
+                    'atts'    => array(
+                        'manufacturer' => $arrFileStr[6], // proizvoditel
+                        'model' => $arrFileStr[7], // model
+                        'width' => $arrFileStr[8], // shirina
+                        'diametr' => $arrFileStr[9], // diametr
+                        'height' => $arrFileStr[10], // vysota
+                        'index' => $arrFileStr[11], // indeks
+                        'pcd' => $arrFileStr[12], // pcd
+                        'flying' => $arrFileStr[13], // vylet
+                        'dia' => $arrFileStr[14], // dia
+                        'color' => $arrFileStr[15], // tsvet
+                        'seasonality' => $arrFileStr[18], // sezon
+                        )
                     ) );
 
                 $_product->setMetas( array(
@@ -248,19 +295,6 @@ class Exchange_Cache
                     '_stock' => $arrFileStr[5],
                     ) );
 
-                $_product->setAttributes( array(
-                    'manufacturer' => $arrFileStr[6], // proizvoditel
-                    'model' => $arrFileStr[7], // model
-                    'width' => $arrFileStr[8], // shirina
-                    'diametr' => $arrFileStr[9], // diametr
-                    'height' => $arrFileStr[10], // vysota
-                    'index' => $arrFileStr[11], // indeks
-                    'pcd' => $arrFileStr[12], // pcd
-                    'flying' => $arrFileStr[13], // vylet
-                    'dia' => $arrFileStr[14], // dia
-                    'color' => $arrFileStr[15], // tsvet
-                    'seasonality' => $arrFileStr[18], // sezon
-                    ) );
 
                 $products[ $arrFileStr[0] ] = $_product;
             }
@@ -272,15 +306,7 @@ class Exchange_Cache
 
         file_put_contents( EXCHANGE_DIR_CACHE . '/' . Exchange_Product::FILE, serialize($products) );
 
-        $this->updateAttributesCache();
         $this->updateOffersCache();
-    }
-
-    /**
-     * Called from @link updateProductsCache
-     */
-    protected function updateAttributesCache()
-    {
     }
 
     protected function updateOffersCache()

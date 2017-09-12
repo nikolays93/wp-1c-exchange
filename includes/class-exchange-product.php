@@ -8,9 +8,9 @@ class Exchange_Product
     public $title;
     public $content;
     public $terms = array();
+    public $atts = array();
 
     public $arrMeta = array();
-    public $arrAttributes = array();
 
     function __construct( $productData )
     {
@@ -18,6 +18,7 @@ class Exchange_Product
             'title' => '',
             'content' => '',
             'terms' => array(),
+            'atts' => array(),
             '_sku' => '',
             ) );
 
@@ -25,6 +26,7 @@ class Exchange_Product
         $this->title =   $productData['title'];
         $this->content = $productData['content'];
         $this->terms =   $productData['terms'];
+        $this->atts =   $productData['atts'];
 
         Exchange_Cache::$countProducts++;
     }
@@ -37,11 +39,6 @@ class Exchange_Product
             $this->arrMeta['_price'] = sanitize_price( $metas['_price'] );
             $this->arrMeta['_regular_price'] = sanitize_price( $metas['_price'] );
         }
-    }
-
-    function setAttributes( $arrAttributes )
-    {
-        $this->arrAttributes = $arrAttributes;
     }
 
     /**
@@ -173,7 +170,7 @@ class Exchange_Product
              */
             if( in_array($status, apply_filters( 'exchange_update_att_status', array('updated', 'created') ) )  ){
                 $attributes = array();
-                foreach ($self->arrAttributes as $attr_key => $attr_val) {
+                foreach ($self->atts as $attr_key => $attr_val) {
                     $attr = new \stdClass();
                     switch ($attr_key) {
                         case 'manufacturer': $attr->attribute_label = 'Производитель'; break;

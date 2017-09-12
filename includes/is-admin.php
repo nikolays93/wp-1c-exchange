@@ -66,11 +66,15 @@ $page->set_metaboxes();
 
 function ex_settings_page() {
     ex_update_cache();
+
+
     echo "<div class='progress'><div class='progress-fill'></div></div>";
     echo "<div id='ajax_action'></div>";
     echo 'Товаров: <span id="product_count">'.Exchange_Cache::$countProducts.'</span><br>';
     echo 'Категорий: <span id="cat_count">'.Exchange_Cache::$countCategories.'</span>';
-    echo "<textarea name='logs' id='exchange-logs' cols='30' rows='10' style='width:100%;resize:vertical;margin:20px 0;'></textarea>";
+    echo "<textarea name='logs' id='exchange-logs' cols='30' rows='10'>";
+    echo implode(PHP_EOL, Exchange_Cache::$errors) . PHP_EOL . "</textarea>";
+
   // echo "<pre>";
   // var_dump( unserialize( file_get_contents(EXCHANGE_DIR_CACHE . '/' . Exchange_Category::FILE) ) );
   // var_dump( unserialize( file_get_contents(EXCHANGE_DIR_CACHE . '/' . Exchange_Product::FILE) ) );
@@ -117,31 +121,42 @@ function ex_settings_timer() {
 }
 
 function ex_settings_debug() {
+  $arrProductCount = wp_count_posts('product');
+  $productCount = 0;
+  foreach ((array) $arrProductCount as $key => $value) {
+    $productCount += $value;
+  }
+
+  $product_cat_count = wp_count_terms( 'product_cat', array('hide_empty' => false) );
+
+  $attribute_taxonomies = wc_get_attribute_taxonomies();
+  $attributes_count = ( is_array($attribute_taxonomies) ) ? sizeof($attribute_taxonomies) : 0;
+
   ?>
   <table class="widefat striped" id="cache-report">
     <tr>
       <td>Кэшированно товаров</td>
-      <td>0</td>
+      <td><?php echo Exchange_Cache::$countProducts; ?></td>
     </tr>
     <tr>
       <td>Товаров на сайте</td>
-      <td>0</td>
+      <td><?php echo $productCount; ?> (из них <?php echo $arrProductCount->trash ?> в корзине)</td>
     </tr>
     <tr>
       <td>Кэшированно категорий</td>
-      <td>0</td>
+      <td><?php echo Exchange_Cache::$countCategories; ?></td>
     </tr>
     <tr>
       <td>Категорий на сайте</td>
-      <td>0</td>
+      <td><?php echo $product_cat_count; ?></td>
     </tr>
     <tr>
       <td>Кэшированно аттрбутов</td>
-      <td>0</td>
+      <td><?php echo Exchange_Cache::$countAttributes; ?></td>
     </tr>
     <tr>
       <td>Аттрбутов на сайте</td>
-      <td>0</td>
+      <td><?php echo $attributes_count; ?></td>
     </tr>
   </table>
   <p><button type="button" class="button button-primary right">Обновить кэш</button></p>
