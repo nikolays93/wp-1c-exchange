@@ -55,13 +55,14 @@ $page->set_args( EXCHANGE_PAGE, array(
     'title'       => __('Импорт товаров'),
     'menu'        => __('Импорт товаров'),
     'callback'    => 'ex_settings_page',
-  //'validate'    => 'ex_settings_validate',
+    'validate'    => 'ex_settings_validate',
     'permissions' => 'manage_options',
     'tab_sections'=> null,
     'columns'     => 2,
     ) );
 $page->add_metabox( 'exchange_import', __('Импорт'), 'ex_settings_sidebar', 'side');
 $page->add_metabox( 'exchange_timer', __('Затраченное время'), 'ex_settings_timer', 'side');
+$page->add_metabox( 'exchange_settings', __('Настройки'), 'ex_settings_box', 'side');
 
 $page->add_metabox( 'exchange_debug', __('Информация о кэшировании'), 'ex_settings_debug', 'normal');
 $page->set_metaboxes();
@@ -122,6 +123,43 @@ function ex_settings_timer() {
   <?php
 }
 
+function ex_settings_box() {
+  $sn = EXCHANGE_PAGE;
+  $settings = wp_parse_args( get_option( $sn ), array(
+    'cat_upd'  => '',
+    'att_upd'  => '',
+    'per_once' => 50
+    ) );
+  ?>
+  <table class="form-table">
+    <tr>
+      <td>Обновлять категории</td>
+      <td>
+        <input type="checkbox" value="on" name="<?php echo $sn; ?>[cat_upd]" <?php
+          checked($settings['cat_upd'], 'on'); ?>>
+      </td>
+    </tr>
+    <tr>
+      <td>Обновлять аттрибуты</td>
+      <td>
+        <input type="checkbox" value="on" name="<?php echo $sn; ?>[att_upd]" <?php
+          checked($settings['att_upd'], 'on'); ?>>
+      </td>
+    </tr>
+    <tr>
+      <td>Обработать за запрос</td>
+      <td>
+        <input type="number" style="width: 60px;" name="<?php
+          echo $sn; ?>[per_once]" value="<?php echo $settings['per_once'] ?>">
+      </td>
+    </tr>
+  </table>
+
+  <input type="submit" name="submit" class="button button-primary right" value="Сохранить настройки">
+  <div class="clear"></div>
+  <?php
+}
+
 function ex_settings_debug() {
   $arrProductCount = wp_count_posts('product');
   $productCount = 0;
@@ -133,7 +171,6 @@ function ex_settings_debug() {
 
   $attribute_taxonomies = wc_get_attribute_taxonomies();
   $attributes_count = ( is_array($attribute_taxonomies) ) ? sizeof($attribute_taxonomies) : 0;
-
   ?>
   <table class="widefat striped" id="cache-report">
     <tr>
@@ -167,7 +204,9 @@ function ex_settings_debug() {
 }
 
 function ex_settings_validate( $inputs ) {
-
+  $inputs = array_map_recursive( 'sanitize_text_field', $inputs );
+  file_put_contents(__DIR__ . '/debug.log', print_r($inputs, 1) );
+  return $inputs;
 }
 
 /**
