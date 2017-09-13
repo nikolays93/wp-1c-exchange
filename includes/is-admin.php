@@ -15,6 +15,8 @@ function ex_page_enqueue_scripts(){
         if( $screen->id != 'woocommerce_page_exchange' )
             return;
 
+        wp_deregister_script('heartbeat');
+
         wp_enqueue_script( 'products_request', EXCHANGE_PLUG_URL . '/resources/requests.js', 'jquery', '1.0' );
         wp_enqueue_style( 'products_request-css', EXCHANGE_PLUG_URL . '/resources/exchange.css', null, '1.0' );
 
