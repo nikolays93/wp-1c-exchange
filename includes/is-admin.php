@@ -39,7 +39,7 @@ function ex_page_enqueue_scripts(){
  * Добавляем WordPress hookи для работы с AJAX
  */
 add_action( 'wp_ajax_exchange_update_cache', 'ex_update_cache' );
-add_action( 'wp_ajax_exchange_insert_terms', array('Exchange_Category', 'insertOrUpdate') );
+add_action( 'wp_ajax_exchange_insert_terms', array('Exchange_Category', 'initImport') );
 add_action( 'wp_ajax_exchange_insert_posts', array('Exchange_Product', 'insertOrUpdate') );
 
 function ex_update_cache() {

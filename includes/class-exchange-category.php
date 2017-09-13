@@ -9,6 +9,10 @@ class Exchange_Category
 
     public $name, $parent;
 
+    protected static $arrAlready = array();
+    public static $created = 0;
+    public static $updated = 0;
+
     function __construct( $strName = null )
     {
         $this->parent = 0;
@@ -26,95 +30,85 @@ class Exchange_Category
      * Insert Or Update Category Item
      *
      * Записывает категории товаров посредством AJAX
-     * @hook wp_ajax_exchange_insert_posts
-     *
-     * @access private
+     * @hook wp_ajax_exchange_insert_terms
      */
-    static function insertOrUpdate( $count = 50 )
+    static private function import($cat_id, $category, $categories)
     {
-        if( ! wp_verify_nonce( $_POST['nonce'], Exchange::SECURITY ) ) {
-            wp_die('00:Ошибка! нарушены правила безопасности');
+        if( in_array($cat_id, self::$arrAlready) ) {
+            return false;
         }
 
-        $categories = unserialize( file_get_contents(EXCHANGE_DIR_CACHE . '/' . self::FILE) );
-        if( ! is_array($categories) ){
-            wp_die('00:Категории не найдены');
-        }
-
-        $alreadyUpdated = array();
-        foreach ($categories as $id => $self) {
-            if( in_array($self->name, $alreadyUpdated) )
-                continue;
-
-            $args = array(
-                'description'=> '',
-                // 'parent' => $parent ? $parent : null,
-                );
-
-            /**
-             * @todo: see! it's for TiresWorld only
-             */
-            if( $self->is_shina ) $args['parent'] = SHINA_ID;
-            if( $self->is_disc )  $args['parent'] = DISC_ID;
-
-            if( isset($self->parent) && $self->parent ){
-                // echo $self->name, $self->parent, Exchange_Utils::get_item_map_id( $self->parent ) . PHP_EOL;
-                if( $parent_id = Exchange_Utils::get_item_map_id( $self->parent ) ) {
-                    $args['parent'] = (int) $parent_id;
-                }
-                else {
-                    // $id ==? $self->parent
-                    $parent = $categories[ $self->parent ];
-
-                    $pargs = array();
-                    // @todo: see! it's for TiresWorld only
-                    if( $parent->is_shina ) $pargs['parent'] = SHINA_ID;
-                    if( $parent->is_disc )  $pargs['parent'] = DISC_ID;
-
-                    $pargs['name'] = $parent->name;
-                    $pargs['description'] = '';
-
-                    $term = self::insertOrUpdateHandle($parent->name, $pargs, $parent );
-                    $args['parent'] = (int) $term['term_id'];
-                    $alreadyUpdated[] = $parent->name;
-                }
+        $args = array();
+        // @var $category->parent = parent cat id
+        if( $category->parent ) {
+            // категории назначен не существуующий в кэше родитель
+            if( ! isset( $categories[ $category->parent ] ) ) {
+                return false;
             }
 
-            self::insertOrUpdateHandle( $id, $args, $self );
+            self::$arrAlready[] = self::import( $category->parent, $categories[ $category->parent ], $categories );
         }
 
-        wp_die('10:Импорт категорий завершен!');
-    }
 
-    static function insertOrUpdateHandle( $id, $args, $self ){
-        if( $term_id = Exchange_Utils::get_item_map_id( $id ) && !isset( $args['name'] ) ){
+        // @todo: see! it's for TiresWorld only
+        if( $category->is_shina ) $args['parent'] = SHINA_ID;
+        if( $category->is_disc )  $args['parent'] = DISC_ID;
+
+        $args['parent'] = 0;
+        if( $category->parent ) {
+            $parent_id = get_term_id_from_external( $category->parent );
+            $args['parent'] = (int) $parent_id;
+        }
+
+        $args['name'] = $category->name;
+
+        if( $term_id = get_term_id_from_external( $cat_id ) ){
             $status = 'updated';
-            $args['name'] = $self->name;
             $_term = wp_update_term( $term_id, 'product_cat', $args );
         }
         else {
             $status = 'created';
-            $_term = wp_insert_term( $self->name, 'product_cat', $args );
+            $_term = wp_insert_term( $category->name, 'product_cat', $args );
         }
-
-
-        // if( defined('EXCHANGE_DEBUG') && EXCHANGE_DEBUG ) {
-        //     echo $self->name . " need " . $status . '. has parent : ' . $self->parent . PHP_EOL;
-        //     print_r($args);
-        //     echo PHP_EOL;
-        //     return array('term_id' => 'PARENT!');
-        // }
 
         if( is_wp_error($_term) ){
-            $err = array_shift($_term->errors);
-            echo '0:' .$self->name . ':' . $err[0] . PHP_EOL;
-            return array('term_id' => 0);
+            $err = ajax_answer( $category->name .' : '. $_term->get_error_message() );
+            wp_die($err);
+            return '';
         }
 
-        update_term_meta( $_term['term_id'], 'external_id', $self->name );
+        if( $status === 'created' ) {
+            update_term_meta( $_term['term_id'], 'external_id', $cat_id );
+            self::$created++;
+        }
+        else {
+            self::$updated++;
+        }
 
-        Exchange_Utils::update_item_map( $self->name, (int)$_term['term_id'] );
+        return $cat_id;
+    }
 
-        return $_term;
+    static public function initImport()
+    {
+        if( ! isset($_POST['nonce']) || ! wp_verify_nonce( $_POST['nonce'], EXCHANGE_SECURITY ) ) {
+            $err = ajax_answer( 'Ошибка! нарушены правила безопасности' );
+            wp_die( $err );
+        }
+
+        $categories = unserialize( file_get_contents(EXCHANGE_DIR_CACHE . '/' . self::FILE) );
+        if( ! is_array($categories) ) {
+            $err = ajax_answer( 'Категории не найдены' );
+            wp_die( $err );
+        }
+
+        $arrAlready = array();
+        foreach ( $categories as $cat_id => $category ) {
+            self::import($cat_id, $category, $categories);
+        }
+
+        ajax_answer('Выгрузка категорий завершена', 2, array(
+            'created' => self::$created,
+            'updated' => self::$updated,
+        ));
     }
 }
