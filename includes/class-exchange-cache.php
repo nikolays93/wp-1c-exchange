@@ -127,8 +127,7 @@ class Exchange_Cache
                             $head = sizeof( explode(';', $content) );
                             continue;
                         }
-
-                        if($head !== sizeof( explode(';', $content) ) ) {
+                        if( ! empty($content) && $head !== sizeof( explode(';', $content) ) ) {
                             $numStr++;
                             self::$errors[] = 'Фальшивый разделитель на строке ' . $numStr . ' (' . $filename . ')';
                         }
