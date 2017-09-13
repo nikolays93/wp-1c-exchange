@@ -118,5 +118,7 @@ if( ! function_exists('ajax_answer') ) {
             echo json_encode( $answer );
             wp_die( '', '', array( 'response' => ($status > 1) ? 200 : 500 ) );
         }
+
+        return $message;
     }
 }
