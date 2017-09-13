@@ -113,12 +113,10 @@ if( ! function_exists('ajax_answer') ) {
             $answer = wp_parse_args( $args, array(
                 'message' => $message,
                 'status' => $status,
-                'count' => 0,
                 ) );
 
-            echo json_encode( $answer, $message, array( 'response' => ($status > 1) ? 200 : 500 ) );
-
-            wp_die();
+            echo json_encode( $answer );
+            wp_die( '', '', array( 'response' => ($status > 1) ? 200 : 500 ) );
         }
     }
 }
