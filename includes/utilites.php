@@ -4,9 +4,8 @@ if( !function_exists( 'get_term_id_from_external' ) ) {
     function get_term_id_from_external( $external ) {
         global $wpdb;
 
-        $result = $wpdb->get_var(
-            $wpdb->prepare( "SELECT term_id FROM {$wpdb->termmeta} WHERE `meta_value` = %s LIMIT 1;", $external )
-            );
+        $q = "SELECT term_id FROM {$wpdb->termmeta} WHERE `meta_value` = %s LIMIT 1;";
+        $result = $wpdb->get_var( $wpdb->prepare( $q , $external ) );
 
         return $result;
     }
@@ -99,5 +98,27 @@ if( ! function_exists('update_item_map') ) {
         }
 
         return array($result, $action);
+    }
+}
+
+if( ! function_exists('wp_is_ajax') ) {
+    function wp_is_ajax() {
+        return (defined('DOING_AJAX') && DOING_AJAX);
+    }
+}
+
+if( ! function_exists('ajax_answer') ) {
+    function ajax_answer( $message, $status = 0, $args = array() ) {
+        if( wp_is_ajax() ) {
+            $answer = wp_parse_args( $args, array(
+                'message' => $message,
+                'status' => $status,
+                'count' => 0,
+                ) );
+
+            echo json_encode( $answer, $message, array( 'response' => ($status > 1) ? 200 : 500 ) );
+
+            wp_die();
+        }
     }
 }
