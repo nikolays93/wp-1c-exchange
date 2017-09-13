@@ -83,7 +83,7 @@ function ex_settings_page() {
 
 function ex_settings_sidebar() {
   ?>
-  <table class="widefat">
+  <table class="widefat" id="ex-actions">
     <tr>
       <td><input type="checkbox" name="" id="ex_categories"></td>
       <td><label for="ex_categories">Импорт категорий</label></td>
