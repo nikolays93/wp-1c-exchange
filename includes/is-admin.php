@@ -125,11 +125,7 @@ function ex_settings_timer() {
 
 function ex_settings_box() {
   $sn = EXCHANGE_PAGE;
-  $settings = wp_parse_args( get_option( $sn ), array(
-    'cat_upd'  => '',
-    'att_upd'  => '',
-    'per_once' => 50
-    ) );
+  $settings = ex_parse_settings();
   ?>
   <table class="form-table">
     <tr>

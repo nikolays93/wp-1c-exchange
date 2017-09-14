@@ -122,3 +122,27 @@ if( ! function_exists('ajax_answer') ) {
         return $message;
     }
 }
+
+if( ! function_exists('ex_check_security') ) {
+    function ex_check_security() {
+        if( ! isset($_POST['nonce']) || ! wp_verify_nonce( $_POST['nonce'], EXCHANGE_SECURITY ) ) {
+            $err = ajax_answer( 'Ошибка! нарушены правила безопасности' );
+            wp_die( $err );
+        }
+
+        return true;
+    }
+}
+
+if( ! function_exists('ex_parse_settings') ) {
+    function ex_parse_settings() {
+        $settings = wp_parse_args( get_option( EXCHANGE_PAGE ), array(
+            'cat_upd'  => '',
+            'att_upd'  => '',
+            'per_once' => 50
+        ) );
+
+        return $settings;
+    }
+}
+
