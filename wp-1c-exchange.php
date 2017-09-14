@@ -28,7 +28,7 @@ global $wpdb;
 
 // debug only
 // define('EXCHANGE_DEBUG', 1);
-
+define('EXCHANGE_PAGE', 'exchange');
 
 define('EXCHANGE_PLUG_DIR', rtrim( plugin_dir_path( __FILE__ ), '/' ) );
 define('EXCHANGE_PLUG_URL', rtrim( plugins_url( basename(__DIR__) ), '/' ) );

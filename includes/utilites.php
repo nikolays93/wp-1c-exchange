@@ -54,7 +54,7 @@ if( ! function_exists('get_item_map_id') ) {
 
         $tablename = EXCHANGE_MAP;
         $product = $wpdb->get_row(
-            $wpdb->prepare( "SELECT * FROM {$tablename} WHERE `out_item_id` = %s LIMIT 1;", $out )
+            $wpdb->prepare( "SELECT * FROM {$tablename} WHERE `exid` = %s LIMIT 1;", $out )
             );
 
         return isset($product->item_id) ? (int)$product->item_id : false;
@@ -71,7 +71,7 @@ if( ! function_exists('create_item_map') ) {
 
         $result = $wpdb->insert(
             EXCHANGE_MAP,
-            array( 'out_item_id' => $out, 'item_id' => $id ),
+            array( 'exid' => $out, 'item_id' => $id ),
             array( '%s', '%d' )
             );
 
@@ -87,8 +87,8 @@ if( ! function_exists('update_item_map') ) {
             $action = 'updated';
             $result = $wpdb->update(
                 EXCHANGE_MAP,
-                array( 'out_item_id' => $out, 'item_id' => $id ),
-                array( 'out_item_id' => $out ),
+                array( 'exid' => $out, 'item_id' => $id ),
+                array( 'exid' => $out ),
                 array( '%s', '%d' ),
                 array( '%s' )
                 );

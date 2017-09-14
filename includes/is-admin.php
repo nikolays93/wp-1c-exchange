@@ -1,7 +1,5 @@
 <?php
 
-define('EXCHANGE_PAGE', 'exchange');
-
 add_action( 'admin_enqueue_scripts', 'ex_page_enqueue_scripts', 10 );
 
 /**
