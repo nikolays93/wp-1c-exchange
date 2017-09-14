@@ -101,7 +101,6 @@ class Exchange_Category
             wp_die( $err );
         }
 
-        $arrAlready = array();
         foreach ( $categories as $cat_id => $category ) {
             self::import($cat_id, $category, $categories);
         }
