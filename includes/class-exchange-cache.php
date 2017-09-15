@@ -227,7 +227,7 @@ class Exchange_Cache
             }
 
             file_put_contents( EXCHANGE_DIR_CACHE . '/' . Exchange_Category::FILE, serialize($categories) );
-            file_put_contents( EXCHANGE_DIR_CACHE . '/' . 'attributes.cache', serialize($attributes) );
+            file_put_contents( EXCHANGE_DIR_CACHE . '/' . Exchange_Attribute::FILE, serialize($attributes) );
         }
     }
 
