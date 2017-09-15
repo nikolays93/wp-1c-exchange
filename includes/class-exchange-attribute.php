@@ -1,8 +1,49 @@
 <?php
-class Exchange_Atts
+
+class Exchange_Attribute
 {
-    function __construct()
+    const FILE = 'attributes.cache';
+
+    public static $created = 0;
+    public static $updated = 0;
+
+
+    /**
+     * Insert Or Update Category Item
+     *
+     * Записывает категории товаров посредством AJAX
+     * @hook wp_ajax_exchange_insert_terms
+     */
+    static private function import($cat_id, $category, $categories)
     {
+    }
+
+    static public function initImport()
+    {
+        // if( ! isset($_POST['nonce']) || ! wp_verify_nonce( $_POST['nonce'], EXCHANGE_SECURITY ) ) {
+        //     $err = ajax_answer( 'Ошибка! нарушены правила безопасности' );
+        //     wp_die( $err );
+        // }
+
+        $attributes = unserialize( file_get_contents(EXCHANGE_DIR_CACHE . '/' . self::FILE) );
+        if( ! is_array($attributes) ) {
+            $err = ajax_answer( 'Аттрибуты не найдены' );
+            wp_die( $err );
+        }
+
+        echo "<pre style='margin: 0 150px;'>";
+        var_dump( $attributes );
+        echo "</pre>";
+
+        $arrAlready = array();
+        foreach ( $attributes as $attr => $child_attrs ) {
+            // self::import($attr, $child_attrs);
+        }
+
+        ajax_answer('Выгрузка аттрибутов завершена', 2, array(
+            'created' => self::$created,
+            'updated' => self::$updated,
+        ));
     }
 
     /**
