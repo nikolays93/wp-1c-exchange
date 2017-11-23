@@ -14,6 +14,9 @@
 	width: 0%;
 	transition: 0.4s ease width;
 }
+.ajax_action {
+	text-align: center;
+}
 .button.button-danger {
 	color: #fff;
 	background-color: #d9534f;
