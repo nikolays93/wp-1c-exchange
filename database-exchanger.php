@@ -56,9 +56,9 @@ class Utils
         }
 
         // includes
-        require_once __DIR__ . '/includes/admin-page.php';
-        require_once __DIR__ . '/includes/init.php';
         require_once __DIR__ . '/includes/register-taxanomies.php';
+        require_once __DIR__ . '/includes/init.php';
+        require_once __DIR__ . '/includes/admin-page.php';
     }
 
     public static function initialize()
@@ -179,7 +179,7 @@ register_activation_hook( __FILE__, array( __NAMESPACE__ . '\Utils', 'activate' 
 register_uninstall_hook( __FILE__, array( __NAMESPACE__ . '\Utils', 'uninstall' ) );
 // register_deactivation_hook( __FILE__, array( __NAMESPACE__ . '\Utils', 'deactivate' ) );
 
-add_action( 'plugins_loaded', array( __NAMESPACE__ . '\Utils', 'initialize' ), 10 );
+add_action( 'plugins_loaded', array( __NAMESPACE__ . '\Utils', 'initialize' ), 9000 );
 
 if( !function_exists( 'sanitize_price' ) ) {
     // sanitizePrice

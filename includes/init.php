@@ -9,8 +9,13 @@ class Init
     private function get_import_file()
     {
         if( ! $this->import ) {
-            $this->import = new \SimpleXMLElement(
-                file_get_contents( wp_upload_dir()['basedir'] . '/exchange/import0_1.xml' ) );
+            if( is_readable(wp_upload_dir()['basedir'] . '/exchange/import0_1.xml') ) {
+                $this->import = new \SimpleXMLElement(
+                    file_get_contents( wp_upload_dir()['basedir'] . '/exchange/import0_1.xml' ) );
+            }
+            else {
+                return false;
+            }
         }
 
         return $this->import;
@@ -19,8 +24,13 @@ class Init
     private function get_offers_file()
     {
         if( ! $this->offers ) {
-            $this->offers = new \SimpleXMLElement(
-                file_get_contents( wp_upload_dir()['basedir'] . '/exchange/offers0_1.xml' ) );
+            if( is_readable(wp_upload_dir()['basedir'] . '/exchange/offers0_1.xml') ) {
+                $this->offers = new \SimpleXMLElement(
+                    file_get_contents( wp_upload_dir()['basedir'] . '/exchange/offers0_1.xml' ) );
+            }
+            else {
+                return false;
+            }
         }
 
         return $this->offers;
@@ -76,7 +86,7 @@ class Init
                 /**
                  * Update term info
                  */
-                wp_update_term($term['term_id'], $args['taxanomy'], array(
+                $result = wp_update_term($term['term_id'], $args['taxanomy'], array(
                     'name' => $term['name'],
                     'parent' => $parent,
                     ) );
@@ -326,9 +336,12 @@ class Init
     public function parse_categories_recursive( $arr = false, $groups = array(), $parent = false )
     {
         if( ! $arr ) {
-            $import = $this->get_import_file();
-            $arr = $import->Классификатор->Группы->Группа;
+            if( $import = $this->get_import_file() ) {
+                $arr = $import->Классификатор->Группы->Группа;
+            }
         }
+
+        if( ! $arr ) return false;
 
         foreach ($arr as $group) {
             $xml_id = current( $group->Ид );
@@ -353,13 +366,17 @@ class Init
     public function parse_warehouses()
     {
         $whs = array();
-        $offers = $this->get_offers_file();
-        if( isset($offers->ПакетПредложений) && isset($offers->ПакетПредложений->Склады) ) {
-            foreach ($offers->ПакетПредложений->Склады->Склад as $warehouse) {
-                $whs[ current($warehouse->Ид) ] = array(
-                    'name' => current($warehouse->Наименование),
-                    );
+        if( $offers = $this->get_offers_file() ) {
+            if( isset($offers->ПакетПредложений) && isset($offers->ПакетПредложений->Склады) ) {
+                foreach ($offers->ПакетПредложений->Склады->Склад as $warehouse) {
+                    $whs[ current($warehouse->Ид) ] = array(
+                        'name' => current($warehouse->Наименование),
+                        );
+                }
             }
+        }
+        else {
+            // offers file not found
         }
 
         return $whs;
@@ -369,13 +386,17 @@ class Init
     {
         $brands = array();
 
-        $import = $this->get_import_file();
-        foreach ($import->Каталог->Товары->Товар as $product) {
-            if( !isset($product->Изготовитель) ) continue;
+        if( $import = $this->get_import_file() ) {
+            foreach ($import->Каталог->Товары->Товар as $product) {
+                if( !isset($product->Изготовитель) ) continue;
 
-            $brands[ current($product->Изготовитель->Ид) ] = array(
-                'name' => current($product->Изготовитель->Наименование),
-                );
+                $brands[ current($product->Изготовитель->Ид) ] = array(
+                    'name' => current($product->Изготовитель->Наименование),
+                    );
+            }
+        }
+        else {
+            // import file not found
         }
 
         return $brands;
@@ -385,53 +406,57 @@ class Init
     {
         $res = array();
         $i = 0;
-        $import = $this->get_import_file();
-        foreach ($import->Каталог->Товары->Товар as $product) {
-            $i++;
-            if( $i <= ($this->args['offset'] * $this->args['part']) - $this->args['offset'] ) continue;
-            if($i > $this->args['offset'] * $this->args['part']) break;
+        if( $import = $this->get_import_file() ) {
+            foreach ($import->Каталог->Товары->Товар as $product) {
+                $i++;
+                if( $i <= ($this->args['offset'] * $this->args['part']) - $this->args['offset'] ) continue;
+                if($i > $this->args['offset'] * $this->args['part']) break;
 
-            $id = (string) $product->Ид;
+                $id = (string) $product->Ид;
 
-            $res[ $id ] = array(
-                'sku'     => (string) $product->Артикул,
-                'title'   => (string) $product->Наименование,
-                'unit'    => (string) $product->БазоваяЕдиница[0]->attributes()['НаименованиеПолное'],
-                'content' => (string) $product->Описание,
-                'brand'   => array( (string) $product->Изготовитель->Ид => (string) $product->Изготовитель->Наименование ),
-                );
+                $res[ $id ] = array(
+                    'sku'     => (string) $product->Артикул,
+                    'title'   => (string) $product->Наименование,
+                    'unit'    => (string) $product->БазоваяЕдиница[0]->attributes()['НаименованиеПолное'],
+                    'content' => (string) $product->Описание,
+                    'brand'   => array( (string) $product->Изготовитель->Ид => (string) $product->Изготовитель->Наименование ),
+                    );
 
-            $offers = $this->get_offers_file();
-            if( isset($offers->ПакетПредложений) && isset($offers->ПакетПредложений->Предложения) ){
-                foreach ($offers->ПакетПредложений->Предложения->Предложение as $offer) {
-                    $offer_id = (string) $offer->Ид;
+                $offers = $this->get_offers_file();
+                if( isset($offers->ПакетПредложений) && isset($offers->ПакетПредложений->Предложения) ){
+                    foreach ($offers->ПакетПредложений->Предложения->Предложение as $offer) {
+                        $offer_id = (string) $offer->Ид;
 
-                    $qtys = array();
-                    foreach ($offer->Склад as $attr) {
-                        $_attr = $attr->attributes();
-                        $qtys[ current($_attr['ИдСклада']) ] = intval($_attr['КоличествоНаСкладе']);
-                    }
-                    if( $offer_id === $id ) {
+                        $qtys = array();
+                        foreach ($offer->Склад as $attr) {
+                            $_attr = $attr->attributes();
+                            $qtys[ current($_attr['ИдСклада']) ] = intval($_attr['КоличествоНаСкладе']);
+                        }
+                        if( $offer_id === $id ) {
                         // ['offer'][ $offer_id ]
-                        $res[ $id ] = array_merge( $res[ $id ], array(
-                            'sku'           => (string) $offer->Артикул,
-                            'title'         => (string) $offer->Наименование,
-                            'unit'          => (string) $offer->БазоваяЕдиница[0]->attributes()['НаименованиеПолное'],
-                            'price'         => (int)    $offer->Цены->Цена->ЦенаЗаЕдиницу,
-                            'currency'      => (string) $offer->Цены->Цена->Валюта,
-                            'stock'         => (int)    $offer->Количество,
-                            'stock_wh'      => $qtys,
-                        ) );
-                        break;
+                            $res[ $id ] = array_merge( $res[ $id ], array(
+                                'sku'           => (string) $offer->Артикул,
+                                'title'         => (string) $offer->Наименование,
+                                'unit'          => (string) $offer->БазоваяЕдиница[0]->attributes()['НаименованиеПолное'],
+                                'price'         => (int)    $offer->Цены->Цена->ЦенаЗаЕдиницу,
+                                'currency'      => (string) $offer->Цены->Цена->Валюта,
+                                'stock'         => (int)    $offer->Количество,
+                                'stock_wh'      => $qtys,
+                                ) );
+                            break;
+                        }
                     }
                 }
-            }
 
-            $groups = array();
-            foreach ($product->Группы as $group) {
-                $groups[] = (string) $group->Ид;
+                $groups = array();
+                foreach ($product->Группы as $group) {
+                    $groups[] = (string) $group->Ид;
+                }
+                $res[ $id ]['terms'] = $groups;
             }
-            $res[ $id ]['terms'] = $groups;
+        }
+        else {
+            // import file not found
         }
 
         return $res;
