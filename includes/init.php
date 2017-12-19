@@ -4,14 +4,34 @@ namespace CDevelopers\Exchange;
 
 class Init
 {
+    const IMPORT = '/exchange/import0_1.xml';
+    const OFFERS = '/exchange/offers0_1.xml';
     private $import, $offers, $args;
+
+    public static function is_import_file_exists()
+    {
+        if( is_readable(wp_upload_dir()['basedir'] . self::IMPORT) ) {
+            return true;
+        }
+
+        return false;
+    }
+
+    public static function is_offers_file_exists()
+    {
+        if( is_readable(wp_upload_dir()['basedir'] . self::OFFERS) ) {
+            return true;
+        }
+
+        return false;
+    }
 
     private function get_import_file()
     {
         if( ! $this->import ) {
-            if( is_readable(wp_upload_dir()['basedir'] . '/exchange/import0_1.xml') ) {
+            if( is_readable(wp_upload_dir()['basedir'] . self::IMPORT) ) {
                 $this->import = new \SimpleXMLElement(
-                    file_get_contents( wp_upload_dir()['basedir'] . '/exchange/import0_1.xml' ) );
+                    file_get_contents( wp_upload_dir()['basedir'] . self::IMPORT ) );
             }
             else {
                 return false;
@@ -24,9 +44,9 @@ class Init
     private function get_offers_file()
     {
         if( ! $this->offers ) {
-            if( is_readable(wp_upload_dir()['basedir'] . '/exchange/offers0_1.xml') ) {
+            if( is_readable(wp_upload_dir()['basedir'] . self::OFFERS) ) {
                 $this->offers = new \SimpleXMLElement(
-                    file_get_contents( wp_upload_dir()['basedir'] . '/exchange/offers0_1.xml' ) );
+                    file_get_contents( wp_upload_dir()['basedir'] . self::OFFERS ) );
             }
             else {
                 return false;
@@ -86,6 +106,7 @@ class Init
                 /**
                  * Update term info
                  */
+                $term = apply_filters( 'de_update_term', $term );
                 $result = wp_update_term($term['term_id'], $args['taxanomy'], array(
                     'name' => $term['name'],
                     'parent' => $parent,
@@ -95,6 +116,7 @@ class Init
                 /**
                  * Create new term with info and add XML_ID meta
                  */
+                $term = apply_filters( 'de_insert_term', $term );
                 $result = wp_insert_term($term['name'], $args['taxanomy'], array(
                     'description' => '',
                     'parent'      => $parent,
@@ -459,6 +481,6 @@ class Init
             // import file not found
         }
 
-        return $res;
+        return current($res) ? $res : false;
     }
 }

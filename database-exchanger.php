@@ -59,6 +59,7 @@ class Utils
         require_once __DIR__ . '/includes/register-taxanomies.php';
         require_once __DIR__ . '/includes/init.php';
         require_once __DIR__ . '/includes/admin-page.php';
+        require_once __DIR__ . '/includes/ajax.php';
     }
 
     public static function initialize()
