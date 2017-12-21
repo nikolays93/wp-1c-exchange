@@ -45,7 +45,7 @@ class Utils
         $classes = array(
             // __NAMESPACE__ . '\Example_List_Table' => '/wp-list-table.php',
             __NAMESPACE__ . '\WP_Admin_Page'      => $class_dir . '/wp-admin-page.php',
-            // __NAMESPACE__ . '\WP_Admin_Forms'     => $class_dir . '/wp-admin-forms.php',
+            __NAMESPACE__ . '\WP_Admin_Forms'     => $class_dir . '/wp-admin-forms.php',
             // __NAMESPACE__ . '\WP_Post_Boxes'      => $class_dir . '/wp-post-boxes.php',
             );
 

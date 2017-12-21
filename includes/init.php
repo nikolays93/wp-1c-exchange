@@ -8,24 +8,6 @@ class Init
     const OFFERS = '/exchange/offers0_1.xml';
     private $import, $offers, $args;
 
-    public static function is_import_file_exists()
-    {
-        if( is_readable(wp_upload_dir()['basedir'] . self::IMPORT) ) {
-            return true;
-        }
-
-        return false;
-    }
-
-    public static function is_offers_file_exists()
-    {
-        if( is_readable(wp_upload_dir()['basedir'] . self::OFFERS) ) {
-            return true;
-        }
-
-        return false;
-    }
-
     private function get_import_file()
     {
         if( ! $this->import ) {
@@ -59,7 +41,7 @@ class Init
     function __construct( $args = array() )
     {
         $this->args = wp_parse_args( array_map('intval', (array) $args), array(
-            'offset' => 500,
+            'offset' => 1000,
             'part'   => 1,
         ) );
     }
@@ -482,5 +464,25 @@ class Init
         }
 
         return current($res) ? $res : false;
+    }
+
+    public function get_import_size()
+    {
+        $import = $this->get_import_file();
+        if( isset($import->Каталог->Товары->Товар) ) {
+            return count( $import->Каталог->Товары->Товар );
+        }
+
+        return 0;
+    }
+
+    public function get_offers_size()
+    {
+        $offers = $this->get_offers_file();
+        if( isset($offers->ПакетПредложений) && isset($offers->ПакетПредложений->Предложения->Предложение) ) {
+            return count( $offers->ПакетПредложений->Предложения->Предложение );
+        }
+
+        return 0;
     }
 }

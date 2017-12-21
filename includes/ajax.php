@@ -9,7 +9,7 @@ function ex_ajax_update_taxanomy() {
     //     wp_die();
     // }
     $ex = new Init( array(
-        'offset' => 1000,
+        'offset' => Utils::get('offset'),
         'part'   => 1,
     ) );
 
@@ -30,8 +30,9 @@ function ex_ajax_update_product() {
     //     echo 'Ошибка! нарушены правила безопасности';
     //     wp_die();
     // }
+
     $ex = new Init( array(
-        'offset' => 1000,
+        'offset' => Utils::get('offset'),
         'part'   => $_POST['part'],
     ) );
 
@@ -54,16 +55,22 @@ function ex_ajax_update_relationships() {
     //     echo 'Ошибка! нарушены правила безопасности';
     //     wp_die();
     // }
-    $ex = new Init( array(
-        'offset' => 1000,
-        'part'   => 1,
-    ) );
-    $products = $ex->parse_products();
-    // has offset by product count and products
-    $ex::update_cat_relationships( $products );
-    $ex::update_wh_relationships( $products );
-    $ex::update_brand_relationships( $products );
 
-    echo json_encode( array('retry' => 0) );
+    $ex = new Init( array(
+        'offset' => Utils::get('offset'),
+        'part'   => $_POST['part'],
+    ) );
+
+    $products = $ex->parse_products();
+    if( $products ) {
+        $ex::update_cat_relationships( $products );
+        $ex::update_wh_relationships( $products ); // ?
+        $ex::update_brand_relationships( $products );
+        echo json_encode( array('retry' => 1) );
+    }
+    else {
+        echo json_encode( array('retry' => 0) );
+    }
+
     wp_die();
 }

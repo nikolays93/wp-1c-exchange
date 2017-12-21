@@ -1,15 +1,12 @@
 jQuery(document).ready(function($) {
-    var part = 1;
-    var progress = 0;
-    var $progress = $('.progress .progress-fill');
-    var $ajax_request;
+    var progress_fill = 0;
     var error_msg = 'Случилась непредвиденая ошибка, попробуйте повторить позже';
-    var status = 'active';
-    var arrActions = [];
-    var ajaxdata = {
-        // nonce : request_settings.nonce,
-        counter : 1
-    };
+    var $progress = $('.progress .progress-fill');
+    var part = 0,
+        progress = 0;
+    var $ajax_request;
+
+    var pParts = Math.ceil( resourses.offers_size / resourses.offset );
 
     var timer = {
         d : new Date(0, 0, 0, 0, 0, 0, 0, 0),
@@ -44,7 +41,10 @@ jQuery(document).ready(function($) {
         },
     }
 
-    // ajaxdata.update_count = Math.ceil( request_settings.products_count / ajaxdata.at_once ); // количество запросов
+    function update_progress() {
+        progress_fill++;
+        $progress.css('width', progress_fill * 100 / (1 + pParts + pParts) + '%' );
+    }
 
     function doExchangeTerms()
     {
@@ -55,13 +55,14 @@ jQuery(document).ready(function($) {
                 'action' : 'exchange_taxanomies',
             },
             success: function( response ) {
+                update_progress();
+
                 var response = JSON.parse( response );
                 if( response.retry == 1 ) { doExchangeTerms(); }
                 else { doExchange(); }
             },
             error: function() {
-                timer.stop();
-                alert( error_msg );
+                timer.stop(); $('#ajax_action').html( '<span style="color: red;">' + error_msg + '</span>' );
             }
         });
     }
@@ -77,12 +78,11 @@ jQuery(document).ready(function($) {
             },
             success: function( response ) {
                 var response = JSON.parse( response );
-                if( response.retry == 1 ) { part++; doExchangeProducts(); }
+                if( response.retry == 1 ) { part++; update_progress(); doExchangeProducts(); }
                 else { doExchange(); }
             },
             error: function() {
-                timer.stop();
-                alert( error_msg );
+                timer.stop(); $('#ajax_action').html( '<span style="color: red;">' + error_msg + '</span>' );
             }
         });
     }
@@ -93,41 +93,39 @@ jQuery(document).ready(function($) {
             type: 'POST',
             url: ajaxurl,
             data: {
+                'part' : part,
                 'action' : 'exchange_relationships',
             },
             success: function( response ) {
                 var response = JSON.parse( response );
-                if( response.retry == 1 ) { doExchangeRelationships(); }
+                if( response.retry == 1 ) { part++; update_progress(); doExchangeRelationships(); }
                 else { doExchange(); }
             },
             error: function() {
-                timer.stop();
-                alert( error_msg );
+                timer.stop(); $('#ajax_action').html( '<span style="color: red;">' + error_msg + '</span>' );
             }
         });
     }
 
     function doExchange() {
+        part = 1;
+
         if( progress == 0 ) {
-            $progress.css('width', '1%');
             $('#ajax_action').html( 'Обновление категорий.' );
             doExchangeTerms();
         }
         else
         if( progress == 1 ) {
-            $progress.css('width', '25%');
             $('#ajax_action').html( 'Обновление товаров.' );
             doExchangeProducts();
         }
         else
         if( progress == 2 ) {
-            $progress.css('width', '75%');
             $('#ajax_action').html( 'Обновление отношений.' );
             doExchangeRelationships();
         }
         else
         if( progress == 3 ) {
-            $progress.css('width', '100%');
             $('#ajax_action').html( 'Обновление завершено.' );
             $( '#stop-exchange' ).attr('disabled', 'true');
             $( '#exchangeit' ).attr('disabled', 'true');
@@ -139,26 +137,12 @@ jQuery(document).ready(function($) {
 
     $( '#exchangeit' ).on('click', function(event) {
         event.preventDefault();
+        $progress.css('width', '1%');
 
-        var event_action = $(this).attr('data-action');
-        if( event_action == 'start' ) {
-            timer.start();
-            status = 'active';
-
-            doExchange();
-
-            $(this).removeClass('button-primary');
-            $(this).text( 'Пауза' );
-            $(this).attr('data-action', 'pause');
-        }
-        else if ( event_action == 'pause' ) {
-            status = 'pause';
-            progress--;
-
-            $(this).addClass('button-primary');
-            $(this).text( 'Продолжить' );
-            $(this).attr('data-action', 'start');
-        }
+        timer.start();
+        doExchange();
+        $(this).removeClass('button-primary');
+        $( '#exchangeit' ).attr('disabled', 'true');
     });
 
     $( '#stop-exchange' ).on('click', function(event) {
@@ -167,9 +151,9 @@ jQuery(document).ready(function($) {
         timer.stop();
         error_msg = 'Импорт товаров прерван!';
 
+        $ajax_request.abort();
         $( '#stop-exchange' ).attr('disabled', 'true');
         $( '#exchangeit' ).attr('disabled', 'true');
-        $ajax_request.abort();
     });
 
     // $('#load-categories.button-primary').on('click', function(event) {
