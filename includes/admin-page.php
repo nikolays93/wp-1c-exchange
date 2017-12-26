@@ -186,9 +186,10 @@ class Admin_Page
             echo "<br /><span style='color: red;'>Файл предложений поврежден или не обнаружен</span>";
         }
 
-        echo( '<br>Найдено категорий: ' . $this->resourses['categories_size'] );
-        echo( '<br>Найдено производителей: ' . $this->resourses['brands_size'] );
-        echo( '<br>Найдено складов: ' . $this->resourses['warehouses_size'] );
+        echo '<br>Найдено категорий: ' . $this->resourses['categories_size'];
+        echo '<br>Найдено производителей: ' . $this->resourses['brands_size'];
+        echo '<br>Найдено складов: ' . $this->resourses['warehouses_size'];
+        echo " (Из них ".Init::set_warehouses_relations( $this->resourses['warehouses'] )." будет обновлено)";
     }
 
     static function metabox1_callback()
@@ -205,7 +206,7 @@ class Admin_Page
 
         <p>
             <small>
-                <span style="color: red;">*</span> Пауза не прерывает последний запрос, а останавливает импорт после него.
+                <span style="color: red;">*</span> Если прервать импорт, возобновить его не получится.
             </small>
         </p>
         <?php

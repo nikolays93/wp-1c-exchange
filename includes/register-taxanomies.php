@@ -1,5 +1,7 @@
 <?php
 
+namespace CDevelopers\Exchange;
+
 // add_action('init', __NAMESPACE__ . '\ex_register_warehouse');
 add_action('init', __NAMESPACE__ . '\ex_register_brand');
 // function ex_register_warehouse() {

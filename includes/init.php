@@ -192,24 +192,27 @@ class Init
 
         global $wpdb;
 
-        $create = $arr;
+        // $create = $arr;
 
         $date = date('Y-m-d H:i:s');
         $gmdate = gmdate('Y-m-d H:i:s');
 
         $XMLS = array_keys($arr);
         foreach ($XMLS as &$XML) { $XML = "post_mime_type = 'XML/$XML'"; }
-        $exsists = $wpdb->get_results("SELECT ID, post_mime_type FROM $wpdb->posts WHERE post_type = 'product' AND (". implode(" \t\n OR ", $XMLS) . ")");
+        $exsists = $wpdb->get_results("SELECT ID, post_date, post_date_gmt, post_name, post_mime_type FROM $wpdb->posts WHERE post_type = 'product' AND (". implode(" \t\n OR ", $XMLS) . ")");
 
         foreach ($exsists as $exsist) {
             $xml_orig = explode('/', $exsist->post_mime_type);
 
             if( isset($arr[ $xml_orig[1] ]) ) {
                 $arr[ $xml_orig[1] ]['ID'] = $exsist->ID;
+                $arr[ $xml_orig[1] ]['post_date'] = $exsist->post_date;
+                $arr[ $xml_orig[1] ]['post_date_gmt'] = $exsist->post_date_gmt;
+                $arr[ $xml_orig[1] ]['post_name'] = $exsist->post_name;
 
-                if( isset( $xml_orig[1] ) ) {
-                    unset($create[$xml_orig[1]]);
-                }
+                // if( isset( $xml_orig[1] ) ) {
+                //     unset($create[$xml_orig[1]]);
+                // }
             }
         }
 
@@ -219,10 +222,48 @@ class Init
         VALUES ";
 
         $site_url = get_site_url();
+        $exchange_author = 1;
         foreach ($arr as $xml_id => $_post) {
             $id = isset( $_post['ID'] ) ? (int) $_post['ID'] : '';
-            $slug = sanitize_cyr_url( $_post['title'] );
-            array_push( $insert, $id, 1, $date, $gmdate, $_post['content'], $_post['title'], '', 'publish', 'closed', 'closed', '', $slug, '', '', $date, $gmdate, '', 0, $site_url . '/product/' . $slug, 0, 'product', "XML/$xml_id", 0 );
+            if( $id ) {
+                // update
+                $create_date = $_post['post_date'];
+                $create_gmdate = $_post['post_date_gmt'];
+                $slug = $_post['post_name'];
+            }
+            else {
+                // create
+                $slug = sanitize_cyr_url( $_post['title'] );
+                $create_date = $date;
+                $create_gmdate = $gmdate;
+            }
+
+            $guid = $site_url . '/product/' . $slug;
+
+            array_push( $insert,
+                $id,
+                $exchange_author,
+                $create_date,
+                $create_gmdate,
+                $_post['content'],
+                $_post['title'],
+                '',
+                'publish',
+                'closed',
+                'closed',
+                '',
+                $slug,
+                '',
+                '',
+                $date,
+                $gmdate,
+                '',
+                0,
+                $guid,
+                0,
+                'product',
+                "XML/$xml_id",
+                0 );
             $place_holders[] = "('%d', '%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%d', '%s', '%d', '%s', '%s', '%d')";
         }
 
@@ -281,16 +322,18 @@ class Init
             if( ! $id ) continue;
 
             foreach ($columns as $column) {
-                update_post_meta( $id, "_$column", $_post[ $column ] );
-            }
+                $val = isset($_post[ $column ]) ? $_post[ $column ] : '';
+                update_post_meta( $id, "_$column", $val );
 
-            if( in_array('price', $columns) ) {
-                update_post_meta( $id, "_regular_price", $_post['price'] );
-            }
+                if( 'price' == $column ) {
+                    update_post_meta( $id, "_regular_price", $val );
+                }
 
-            if( in_array('stock', $columns) ) {
-                update_post_meta( $id, '_manage_stock', 'yes' );
-                update_post_meta( $id, '_stock_status', $_post['stock'] < 1 ? 'outofstock' : 'instock');
+                if( 'stock' == $column ) {
+                    update_post_meta( $id, '_manage_stock', 'yes' );
+                    update_post_meta( $id, '_stock_status',
+                        (isset($_post['stock']) && $_post['stock'] >= 1) ? 'instock' : 'outofstock');
+                }
             }
         }
     }
@@ -304,7 +347,7 @@ class Init
     public static function update_warehouses( $arr )
     {
 
-        self::update_terms( $arr, array('taxanomy' => 'warehouse') );
+        // self::update_terms( $arr, array('taxanomy' => 'warehouse') );
     }
 
     public static function update_brands( $arr )
@@ -323,10 +366,10 @@ class Init
 
     public static function update_wh_relationships( $arr )
     {
-        self::update_relationships($arr, array(
-            'var' => 'stock_wh',
-            'taxanomy' => 'warehouse',
-            ));
+        // self::update_relationships($arr, array(
+        //     'var' => 'stock_wh',
+        //     'taxanomy' => 'warehouse',
+        //     ));
     }
 
     public static function update_brand_relationships( $arr )
@@ -373,9 +416,12 @@ class Init
         if( $offers = $this->get_offers_file() ) {
             if( isset($offers->ПакетПредложений) && isset($offers->ПакетПредложений->Склады) ) {
                 foreach ($offers->ПакетПредложений->Склады->Склад as $warehouse) {
-                    $whs[ current($warehouse->Ид) ] = array(
-                        'name' => current($warehouse->Наименование),
-                        );
+                    $id = current($warehouse->Ид);
+                    $whs[ $id ] = array();
+                    $whs[ $id ]['name'] = current($warehouse->Наименование);
+                    // if( isset($warehouse->Контакты->Контакт->Значение) ) {
+                    //     $whs[ $id ]['address'] = current($warehouse->Контакты->Контакт->Значение);
+                    // }
                 }
             }
         }
@@ -384,6 +430,28 @@ class Init
         }
 
         return $whs;
+    }
+
+    public static function set_warehouses_relations( &$warehouses = array() ) {
+        $xmls = array(
+            'primary'    => get_theme_mod( 'primary_XML_ID', '0' ),
+            'secondary'  => get_theme_mod( 'secondary_XML_ID', '0' ),
+            'tertiary'   => get_theme_mod( 'tertiary_XML_ID', '0' ),
+            'quaternary' => get_theme_mod( 'quaternary_XML_ID', '0' ),
+            'fivefold'   => get_theme_mod( 'fivefold_XML_ID', '0' ),
+            );
+        $xmls = array_flip($xmls);
+        unset( $xmls[0] );
+
+        $wh_count = 0;
+        foreach ($warehouses as $wh_key => &$warehouse) {
+            if( isset( $xmls[ $wh_key ] ) ) {
+                $warehouse[ 'contact' ] = $xmls[ $wh_key ];
+                $wh_count++;
+            }
+        }
+
+        return $wh_count;
     }
 
     public function parse_brands()
