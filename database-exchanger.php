@@ -46,7 +46,6 @@ class Utils
             // __NAMESPACE__ . '\Example_List_Table' => '/wp-list-table.php',
             __NAMESPACE__ . '\WP_Admin_Page'      => $class_dir . '/wp-admin-page.php',
             __NAMESPACE__ . '\WP_Admin_Forms'     => $class_dir . '/wp-admin-forms.php',
-            // __NAMESPACE__ . '\WP_Post_Boxes'      => $class_dir . '/wp-post-boxes.php',
             );
 
         foreach ($classes as $classname => $path) {
@@ -57,6 +56,7 @@ class Utils
 
         // includes
         require_once __DIR__ . '/includes/register-taxanomies.php';
+        require_once __DIR__ . '/includes/wc-product-properties.php';
         require_once __DIR__ . '/includes/init.php';
         require_once __DIR__ . '/includes/admin-page.php';
         require_once __DIR__ . '/includes/ajax.php';
@@ -66,6 +66,10 @@ class Utils
     {
         if( self::$initialized ) {
             return false;
+        }
+
+        if (class_exists('\CDevelopers\Contacts\CustomField')) {
+            new \CDevelopers\Contacts\CustomField('XML_ID', __('Your organization XML_ID', DOMAIN) );
         }
 
         // load_plugin_textdomain( DOMAIN, false, DOMAIN . '/languages/' );
@@ -219,27 +223,27 @@ if( ! function_exists( 'sanitize_cyr_url' ) ) {
     }
 }
 
-if( ! function_exists('wp_is_ajax') ) {
-    function wp_is_ajax() {
-        return (defined('DOING_AJAX') && DOING_AJAX);
-    }
-}
+// if( ! function_exists('wp_is_ajax') ) {
+//     function wp_is_ajax() {
+//         return (defined('DOING_AJAX') && DOING_AJAX);
+//     }
+// }
 
-if( ! function_exists('ajax_answer') ) {
-    function ajax_answer( $message, $status = 0, $args = array() ) {
-        if( wp_is_ajax() ) {
-            $answer = wp_parse_args( $args, array(
-                'message' => $message,
-                'status' => $status,
-                ) );
+// if( ! function_exists('ajax_answer') ) {
+//     function ajax_answer( $message, $status = 0, $args = array() ) {
+//         if( wp_is_ajax() ) {
+//             $answer = wp_parse_args( $args, array(
+//                 'message' => $message,
+//                 'status' => $status,
+//                 ) );
 
-            echo json_encode( $answer );
-            wp_die( '', '', array( 'response' => ($status > 1) ? 200 : 500 ) );
-        }
+//             echo json_encode( $answer );
+//             wp_die( '', '', array( 'response' => ($status > 1) ? 200 : 500 ) );
+//         }
 
-        return $message;
-    }
-}
+//         return $message;
+//     }
+// }
 
 if( ! function_exists('ex_check_security') ) {
     function ex_check_security() {
@@ -252,19 +256,3 @@ if( ! function_exists('ex_check_security') ) {
         return true;
     }
 }
-
-if( ! function_exists('ex_parse_settings') ) {
-    function ex_parse_settings() {
-        $settings = wp_parse_args( get_option( EXCHANGE_PAGE ), array(
-            'cat_upd'  => '',
-            'att_upd'  => '',
-            'per_once' => 50
-        ) );
-
-        return $settings;
-    }
-}
-
-// echo "<pre>";
-// var_dump( get_post_meta( $_GET['post']) );
-// echo "</pre>";
