@@ -15,9 +15,16 @@ function ex_ajax_update_taxanomy() {
 
     $categories = $ex->parse_categories_recursive();
     $brands = $ex->parse_brands();
-    $warehouses = $ex->parse_warehouses();
+    $warehouses = $warehouses = $ex->parse_warehouses();
+
     $ex::update_categories( $categories );
-    $ex::update_warehouses( $warehouses );
+    // $ex::update_warehouses( $warehouses );
+    $ex::set_warehouses_relations( $warehouses );
+    foreach ($warehouses as $xml_wh => $wh) {
+        if( isset($wh['contact']) ) {
+            set_theme_mod( $wh['contact'] . '_company_name', $wh['name'] );
+        }
+    }
     $ex::update_brands( $brands );
 
     echo json_encode( array('retry' => 0) );
@@ -64,11 +71,12 @@ function ex_ajax_update_relationships() {
     $products = $ex->parse_products();
     if( $products ) {
         $ex::update_cat_relationships( $products );
-        $ex::update_wh_relationships( $products ); // ?
+        // $ex::update_wh_relationships( $products ); // not needed?
         $ex::update_brand_relationships( $products );
         echo json_encode( array('retry' => 1) );
     }
     else {
+        update_option( 'last_exchange', time() );
         echo json_encode( array('retry' => 0) );
     }
 
