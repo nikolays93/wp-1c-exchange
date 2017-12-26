@@ -12,7 +12,8 @@
 .progress .progress-fill {
     background: #008ec2;
     width: 0%;
-    transition: 0.4s ease width;
+    max-width: 100%;
+    transition: 5s ease width;
 }
 .button.button-danger {
     color: #fff;

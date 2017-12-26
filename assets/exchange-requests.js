@@ -6,7 +6,7 @@ jQuery(document).ready(function($) {
         progress = 0;
     var $ajax_request;
 
-    var pParts = Math.ceil( resourses.offers_size / resourses.offset );
+    var pParts = Math.ceil( resourses.import_size / resourses.offset );
 
     var timer = {
         d : new Date(0, 0, 0, 0, 0, 0, 0, 0),
