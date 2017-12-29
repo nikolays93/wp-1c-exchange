@@ -488,11 +488,22 @@ class Init
 
                 $res[ $id ] = array(
                     'sku'     => (string) $product->Артикул,
-                    'title'   => (string) $product->Наименование,
                     'unit'    => (string) $product->БазоваяЕдиница[0]->attributes()['НаименованиеПолное'],
                     'content' => (string) $product->Описание,
                     'brand'   => array( (string) $product->Изготовитель->Ид => (string) $product->Изготовитель->Наименование ),
                     );
+
+                $title = false;
+                if( isset($product->ЗначенияРеквизитов->ЗначениеРеквизита) ) {
+                    foreach ($product->ЗначенияРеквизитов->ЗначениеРеквизита as $prop) {
+                        if( 'Полное наименование' == (string) $prop->Наименование ) {
+                            $title = (string) $prop->Значение;
+                            break;
+                        }
+                    }
+                }
+
+                $res[ $id ][ 'title' ] = $title ? $title : (string) $product->Наименование;
 
                 $offers = $this->get_offers_file();
                 if( isset($offers->ПакетПредложений) && isset($offers->ПакетПредложений->Предложения) ){
@@ -508,7 +519,7 @@ class Init
                         // ['offer'][ $offer_id ]
                             $res[ $id ] = array_merge( $res[ $id ], array(
                                 'sku'           => (string) $offer->Артикул,
-                                'title'         => (string) $offer->Наименование,
+                                // 'title'         => (string) $offer->Наименование,
                                 'unit'          => (string) $offer->БазоваяЕдиница[0]->attributes()['НаименованиеПолное'],
                                 'price'         => (int)    $offer->Цены->Цена->ЦенаЗаЕдиницу,
                                 'currency'      => (string) $offer->Цены->Цена->Валюта,
